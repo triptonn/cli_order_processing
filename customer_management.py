@@ -1,4 +1,5 @@
 from pathlib import Path
+import copy
 import os
 
 import main
@@ -7,7 +8,7 @@ import printer
 
             
             
-class customercache:
+class CustomerCache:
     _customer_cache = set()
     
     def __init__(self):
@@ -54,21 +55,15 @@ class customercache:
 
     def get_customer(self, customer_id: str):
         try:
-            _found = False
-            _hit = None
             for _customer in self._customer_cache:
                 assert type(_customer) == customer.Customer
                 if customer_id == _customer.customer_id:
-                    _hit = _customer.customer_id
-                    _found = True
-                                        
-
-            if _found == True:
-                
-                return _hit
+                    return copy.copy(_customer)
             else: raise CustomerNotFoundException
         except CustomerNotFoundException as exc:
             print(f"Caught CustomerNotFoundException with custom_kwarg={exc.custom_kwarg}")
+
+        return None
 
 
     def add_customer_to_cache(self, customer: customer.Customer):
@@ -117,7 +112,7 @@ class CustomerNotFoundException(CustomerDBException):
 
 
 
-def customer_management_loop(customer_cache: customercache):
+def customer_management_loop(customer_cache: CustomerCache):
     _customer_cache = customer_cache
 
     _menu_string = """
@@ -133,7 +128,7 @@ def customer_management_loop(customer_cache: customercache):
         ##########################################################################################################
     """
 
-    printer.Printer.clear_cli()
+    #printer.Printer.clear_cli()
 
     while True:
         print(_menu_string)

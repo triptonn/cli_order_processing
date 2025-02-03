@@ -100,5 +100,5 @@ class Customer:
     
         
     def __str__(self):
-        return f"        Kunde {self.customer_id}: {self.company}, Kontakt: {self.lastname}, {self.name}"
+        return f"Kunde {self.customer_id}: {self.company}, Kontakt: {self.lastname}, {self.name}"
     

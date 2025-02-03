@@ -5,9 +5,9 @@ import printer
 
 
 def main_menu_loop():
-    customer_cache = customer_management.customercache()
-    item_cache = order_processing.itemcache()
-    order_cache = order_processing.ordercache()
+    customer_cache = customer_management.CustomerCache()
+    item_cache = order_processing.ItemCache()
+    order_cache = order_processing.OrderCache()
 
     menu_text = """
         ##########################################################################################################
@@ -20,8 +20,8 @@ def main_menu_loop():
         ##########################################################################################################
     """
 
+    #printer.Printer.clear_cli()
     while True:
-        printer.Printer.clear_cli()
         print(menu_text)
 
         _menu_item = input("Bitte wählen Sie den gewünschten Menüpunkt.\n")

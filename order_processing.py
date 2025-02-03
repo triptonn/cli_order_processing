@@ -6,12 +6,12 @@ import customer_management
 import printer
             
 
-class ordercache:
+class OrderCache:
     _order_cache = set()
     
     def __init__(self):
-        _prep_order_list = []
-        _path = Path("./Datenbanken/order.csv")
+        _prep_order_str_list = []
+        _path = Path("./Datenbanken/orders.csv")
         _order_csv_exists = _path.exists()
         if _order_csv_exists:
             try:
@@ -19,20 +19,25 @@ class ordercache:
                     lines = _orderdb.readlines()
                     lines.pop(0)
                     for line in lines:
-                        _prep_order_list.append(line.strip("\n"))
+                        print(line)
+                        _prep_order_str_list.append(line.strip("\n"))
 
-                    for _listed_order in _prep_order_list:
+                    for _listed_order in _prep_order_str_list:
                         _prep_order = str.split(_listed_order, sep=";")
+                        print(_prep_order)
                         _order_id_exists = order.Order.order_id_set.__contains__(int(_prep_order[0]))
                         _order = order.Order(_prep_order[1],_prep_order[3],_prep_order[0],_prep_order[2])
                         if not _order_id_exists:
+                            print(f"Order {int(_prep_order)} initialized")
                             self._order_cache.add(_order)
                         else:
                             raise OrderIDException(str(_order), "Order ID ist bereits vergeben!")
 
             except OrderIDException as exc:
                 print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
-            
+            except Exception as exc:
+                print(f"Unknown Exception caught during order cache initialization: {exc}")
+                
     
     def find_order(self, customer = ""):
         _customer = ""
@@ -79,7 +84,7 @@ class OrderIDException(OrderDBException):
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
-class itemcache:
+class ItemCache:
     _item_cache = set()
     
     def __init__(self):
@@ -110,46 +115,33 @@ class itemcache:
             
     
     def find_item_number(self, item_name: str):
-        if item_name == "": return None
+        if item_name == "":
+            return None
         
-        for i in self._item_cache:
-            #_item = i
-            #_item = copy.copy(i)
-            _item = copy.deepcopy(i)
-            item_number = 0
-            assert type(_item) == order.Item
-            print(f"DEBUG: Item in cache: {_item}")
-            if _item.item_name == item_name: item_number = _item.item_number
-            print(f"DEBUG: While searching for a match in the item cache: {_item.item_name} == {item_name} => {item_number}")
-            return copy.copy(item_number)
-        
-    
-    def get_item(self, item_number: int):
-        try:
-            _found = False
-            _hit = None
-            for _item in self._item_cache:
-                assert type(_item) == order.Item
+        for item in self._item_cache:
+            assert type(item) is order.Item
+            if item.item_name == item_name:
+                return item.item_number
 
-                if item_number == _item.item_number:
-                    _item = list(self._item_cache).sort().__getitem__(item_number - 1)
-                    _hit = copy.copy(_item)
-                    print(f"get_item _hit: {_hit}")
-                    _found = True
-                    break
+    def get_item(self, item_number: int):
+        if item_number == None:
+            return None
+
+        try:
+            for item in self._item_cache:
+                assert type(item) == order.Item
+                if item.item_number == item_number:
+                    return copy.copy(item)
+
+            raise ItemNotFoundException(f"Item with number {item_number} not found")
 
         except ItemNotFoundException as exc:
-            print(f"Caught ItemNotFoundException with custom_kwarg={exc.custom_kwarg}")
-        except AssertionError as err:
-            print(f"Caught AssertionError on _item type {type(_item)}")
-        finally:
-            if _found == True:
-                print("Return copy of _hit")
-                return _hit
-            else:
-                print("Return None")
-                return None
-            
+            print(f"Caught ItemNotFoundException: Item {item_number} not found")
+        except Exception as err:
+            print(f"Unexpected Error while getting item: {err}")
+
+        return None
+
 
     def add_item_to_cache(self, item: order.Item):
         self._item_cache.add(item)
@@ -193,7 +185,7 @@ class ItemNotFoundException(OrderDBException):
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
-def order_processing_menu_loop(customer_cache: customer_management.customercache, order_cache: ordercache, item_cache: itemcache):
+def order_processing_menu_loop(customer_cache: customer_management.CustomerCache, order_cache: OrderCache, item_cache: ItemCache):
     _menu_string = """
         ##########################################################################################################
         Auftragsbearbeitung
@@ -206,16 +198,22 @@ def order_processing_menu_loop(customer_cache: customer_management.customercache
         6. Zurück zum Hauptmenü
         ##########################################################################################################
     """
-    printer.Printer.clear_cli()
+    #printer.Printer.clear_cli()
     while True:
         print(_menu_string)
         _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt:")
 
         if _menu_item == "1":
-            _customer_string = input("        Customer name:\n")
+            _customer_string = input("        Kundenname:")
             _customer_id = customer_cache.find_customer_id(company=_customer_string)
+            _customer = customer_cache.get_customer(_customer_id)
+            if _customer == None:
+                continue
+
             _adding_positions = True
             _position_value_str_int = []
+            _positions = []
+
             while _adding_positions:
                 _count = None
                 _position_valid = True
@@ -235,35 +233,39 @@ def order_processing_menu_loop(customer_cache: customer_management.customercache
                     continue
                 
                 if _item_name_or_number_str != "" and _position_valid:
-                    
-                    _position_value_str_int.append([copy.copy(_item_name_or_number_str), copy.copy(_count)])
+                    _position_value_str_int.append([_item_name_or_number_str, _count])
                 else:
                     print("        Position lässt sich aus den Angaben nicht erzeugen!")
                     continue
-                
-            print(f"DEBUG: _position_value_str_int: {_position_value_str_int}")
-
-            _positions = []
 
             for _position_value in _position_value_str_int:
-                item_number = 0
-                item_name = ""
                 try:
                     item_number = int(_position_value[0])
-                    print(f"with item_number: {order.Position(item_cache.get_item(item_number), _position_value[1])}")
-                except ValueError as err:
-                    err.add_note("While trying to convert the order position name or number to int! Not a valid Integer string!")
-                    print(f"ValueError: {err}")
+                    item = item_cache.get_item(item_number)
+                except ValueError:
                     item_name = _position_value[0]
-                    print(f"with item_name {item_name} ==> {item_cache.find_item_number(item_name)}")
-                    print(f"{order.Position(item_cache.get_item(item_cache.find_item_number(item_name)), _position_value[1])}")
-
-            print("We arrive here!")
-
-
-            # _order = order.Order(customer=customer_cache.get_customer(_customer_id), positions=order.Positions(_positions))
-            # _order.save_order_to_csv()
-            # order_cache.add_order_to_cache(_order)
+                    item_number = item_cache.find_item_number(item_name)
+                    item = item_cache.get_item(item_number)
+                    
+                if item is not None:
+                    position = order.Position(item, _position_value[1])
+                    _positions.append(position)
+                else:
+                    print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")
+                    
+            if _positions:
+                if _customer:
+                    _order = order.Order(
+                        customer=_customer,
+                        positions=order.Positions(_positions)
+                    )
+                    _order.save_order_to_csv()
+                    order_cache.add_order_to_cache(_order)
+                    print("        Auftrag erfolgreich erstellt")
+                else:
+                    print("        Fehler: Kunde nicht gefunden")
+            else:
+                print("        Fehler: Keine gültigen Positionen eingegeben")
 
         elif _menu_item == "2":
             _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu bearbeitenden Auftrags ein!\n")
@@ -292,7 +294,9 @@ def order_processing_menu_loop(customer_cache: customer_management.customercache
             main.main_menu_loop()
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")
-def item_management_menu_loop(item_cache: itemcache):
+            
+            
+def item_management_menu_loop(item_cache: ItemCache):
     _menu_string = """
         ##########################################################################################################
         Auftragsbearbeitung
@@ -304,7 +308,7 @@ def item_management_menu_loop(item_cache: itemcache):
         5. Zurück zum Hauptmenü
         ##########################################################################################################
     """
-    printer.Printer.clear_cli()
+    #printer.Printer.clear_cli()
     while True:
         print(_menu_string)
         _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt:\n")

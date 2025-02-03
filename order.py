@@ -96,10 +96,10 @@ class Position:
         return Position(self.item, self.count)
         
     def __repr__(self):
-        return repr((self.item, self.count, self.position_total))
+        return repr((self.item.item_number,self.item.item_name, self.count, round(self.position_total, 2)))
 
     def __str__(self):
-        return f"{self.item.item_number},{self.item.item_name},{self.count},{self.position_total}"
+        return f"{self.item.item_number},{self.item.item_name},{self.count},{round(self.position_total, 2)}"
 
 
 class Positions:
@@ -167,7 +167,7 @@ class Order:
             assert type(position) == Position            
             self.total += position.position_total
             
-        self.total = round(self.total, 2)
+        self.total = round(self.total, 2) 
 
         
     def save_order_to_csv(self):
@@ -186,21 +186,20 @@ class Order:
                 file.write(f"{self.order_id};{self._customer};{self._state};{self._positions};{round(self.total)}\n")
                 
                 
-    def update_order_in_csv(self, state: OrderState, positions: Positions = None):
+    def update_order_in_csv(self, state: OrderState = None, positions: Positions = None):
         _positions = positions
+        
+        if state != None: self._state = state 
 
         if _positions != None: self._positions = _positions
-        
+       
+        assert type(self._state) is OrderState
         assert type(self._positions) is Positions
 
         self.total = 0.00
         for position in self._positions._position_list:
             assert type(position) is Position
             self.total += position.position_total
-
-
-        
-
 
         _orders_csv = Path("./Datenbanken/orders.csv")
         _temp_orders_csv = Path("./Datenbanken/orders_temp.csv")
@@ -209,10 +208,10 @@ class Order:
             with open(_orders_csv, "r") as input_file, open(_temp_orders_csv, "w") as output_file:
                 lines = input_file.readlines()
                 for line in lines:
-                    if line.strip("\n") != f"{self.order_id};{self._customer};{self._positions};{self.total}\n":
+                    if line.strip("\n") != f"{self.order_id};{self._customer};{self._state};{self._positions};{self.total}\n":
                         output_file.write(line)
                     else:
-                        output_file.write(f"{self.order_id};{self._customer};{_positions};{self.total}\n")
+                        output_file.write(f"{self.order_id};{self._customer};{self._state};{_positions};{self.total}\n")
                         
             os.remove("./Datenbanken/oders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
@@ -225,15 +224,15 @@ class Order:
             with open(_orders_csv, "r") as input_csv_file, open(_temp_orders_csv, "w") as output_csv_file:
                 lines = input_csv_file.readlines()
                 for line in lines:
-                    if line.strip("\n") != f"{self.order_id};{self._customer};{self._positions};{self.total}":
+                    if line.strip("\n") != f"{self.order_id};{self._customer};{self._state};{self._positions};{self.total}":
                         output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
     
     
     def __repr__(self):
-        return repr((self.order_id, self._customer, self._positions, self._position_total))
+        return repr((self.order_id, self._customer, self._state, self._positions, self.total))
 
     def __str__(self):
-        return f"Kunde: {self._customer}, Auftragsnummer {self.order_id}"
+        return f"Kunde: {self._customer}, Auftragsnummer {self.order_id}, Status {self._state}, Positionen {self._positions}, Total: {self.total}"
     
