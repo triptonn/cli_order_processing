@@ -109,35 +109,46 @@ class itemcache:
                 print(f"Caugh ValueError while initializing item cache: {exc.args}")
             
     
-    def find_item_number(self, item_name = ""):
-        _item_name = ""
-        if item_name == "": _item_name = item_name
+    def find_item_number(self, item_name: str):
+        if item_name == "": return None
         
-        for _item in self._item_cache:
+        for i in self._item_cache:
+            #_item = i
+            #_item = copy.copy(i)
+            _item = copy.deepcopy(i)
+            item_number = 0
             assert type(_item) == order.Item
-            
-            if _item.item_name == _item_name:
-                print(_item)
-                
-            return _item.item_number
+            print(f"DEBUG: Item in cache: {_item}")
+            if _item.item_name == item_name: item_number = _item.item_number
+            print(f"DEBUG: While searching for a match in the item cache: {_item.item_name} == {item_name} => {item_number}")
+            return copy.copy(item_number)
         
     
-    def get_item(self, item_number: str):
+    def get_item(self, item_number: int):
         try:
             _found = False
             _hit = None
             for _item in self._item_cache:
                 assert type(_item) == order.Item
-                if int(item_number) == _item.item_number:
-                    _hit = _item
-                    _found = True
 
-            if _found == True:
-                return _hit
-            else: raise ItemNotFoundException
+                if item_number == _item.item_number:
+                    _item = list(self._item_cache).sort().__getitem__(item_number - 1)
+                    _hit = copy.copy(_item)
+                    print(f"get_item _hit: {_hit}")
+                    _found = True
+                    break
+
         except ItemNotFoundException as exc:
             print(f"Caught ItemNotFoundException with custom_kwarg={exc.custom_kwarg}")
-            return None
+        except AssertionError as err:
+            print(f"Caught AssertionError on _item type {type(_item)}")
+        finally:
+            if _found == True:
+                print("Return copy of _hit")
+                return _hit
+            else:
+                print("Return None")
+                return None
             
 
     def add_item_to_cache(self, item: order.Item):
@@ -154,6 +165,7 @@ class itemcache:
         
         
     def print_item_db(self):
+        print(f"DEBUG: {self._item_cache}")
         _item_tuple = tuple(self._item_cache)
         _item_list = sorted(_item_tuple, key=lambda item: item.item_number)
         for _item in _item_list:
@@ -181,7 +193,6 @@ class ItemNotFoundException(OrderDBException):
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
-
 def order_processing_menu_loop(customer_cache: customer_management.customercache, order_cache: ordercache, item_cache: itemcache):
     _menu_string = """
         ##########################################################################################################
@@ -195,30 +206,26 @@ def order_processing_menu_loop(customer_cache: customer_management.customercache
         6. Zurück zum Hauptmenü
         ##########################################################################################################
     """
-
     printer.Printer.clear_cli()
-
     while True:
         print(_menu_string)
-
-        _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt:\n")
+        _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt:")
 
         if _menu_item == "1":
             _customer_string = input("        Customer name:\n")
             _customer_id = customer_cache.find_customer_id(company=_customer_string)
-
             _adding_positions = True
             _position_value_str_int = []
             while _adding_positions:
                 _count = None
                 _position_valid = True
-                _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):\n")
+
+                _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):")
                 if _item_name_or_number_str == "fertig":
                     print("        Keine weiteren Items.")
                     break
 
-                _count_str = input("        Stück:\n")
-                
+                _count_str = input("        Stück:")
                 try:
                     _count = int(_count_str)
                     print(f"DEBUG: Count: {_count}, Type: {type(_count)}")
@@ -228,49 +235,38 @@ def order_processing_menu_loop(customer_cache: customer_management.customercache
                     continue
                 
                 if _item_name_or_number_str != "" and _position_valid:
-                    _position_value_str_int.append([_item_name_or_number_str, _count])
+                    
+                    _position_value_str_int.append([copy.copy(_item_name_or_number_str), copy.copy(_count)])
                 else:
                     print("        Position lässt sich aus den Angaben nicht erzeugen!")
                     continue
                 
+            print(f"DEBUG: _position_value_str_int: {_position_value_str_int}")
+
             _positions = []
-            for position_value in _position_value_str_int:
+
+            for _position_value in _position_value_str_int:
+                item_number = 0
+                item_name = ""
                 try:
-                    _item_number = int(position_value[0])
-                except ValueError:
-                    _item_number = position_value[0]
-                    print("        Itemnummer kein Integer Wert!")
+                    item_number = int(_position_value[0])
+                    print(f"with item_number: {order.Position(item_cache.get_item(item_number), _position_value[1])}")
+                except ValueError as err:
+                    err.add_note("While trying to convert the order position name or number to int! Not a valid Integer string!")
+                    print(f"ValueError: {err}")
+                    item_name = _position_value[0]
+                    print(f"with item_name {item_name} ==> {item_cache.find_item_number(item_name)}")
+                    print(f"{order.Position(item_cache.get_item(item_cache.find_item_number(item_name)), _position_value[1])}")
 
-                
-                if _item_number is None:
-                    print("DEBUG: Itemnumber ist None")
-                    continue
-                elif type(_item_number) is int:
-                    print("DEBUG: Itemnumber ist Integer")
-                    _new_position = order.Position(item=item_cache.get_item(_item_number), count=position_value[1])
-                    _positions.append(_new_position.__copy__())
-                else:
-                    print("DEBUG: Itemnumber ist String")
-                    _item_number = item_cache.find_item_number(position_value[0])
-                    _new_position = order.Position(item=item_cache.get_item(_item_number), count=position_value[1])
-                    _positions.append(_new_position.__copy__())
+            print("We arrive here!")
 
-            print(_positions)
 
-                # try:
-                #     assert type(int(_item_number)) == int
-                #     _item = item_cache.get_item(_item_number)
-                #     _total += position_value[1] * _item.unit_price
-                # except AssertionError as exc:
-                #     print(f"Caught an AssertionError geting the Item object for position {position_value[0]}: {exc.args}")
-            
-            _order = order.Order(customer=customer_cache.get_customer(_customer_id), positions=order.Positions(_positions))
-            _order.save_order_to_csv()
-            order_cache.add_order_to_cache(_order)
-            
-        if _menu_item == "2":
-            _item_number = input("        Bitte geben sie die Auftragsnummer des zu bearbeitenden Auftrags ein!\n")
+            # _order = order.Order(customer=customer_cache.get_customer(_customer_id), positions=order.Positions(_positions))
+            # _order.save_order_to_csv()
+            # order_cache.add_order_to_cache(_order)
 
+        elif _menu_item == "2":
+            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu bearbeitenden Auftrags ein!\n")
             _new_items_string = []
             while True:
                 _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):\n")
@@ -278,34 +274,24 @@ def order_processing_menu_loop(customer_cache: customer_management.customercache
                 if _item_name_or_number_str != "":
                     _new_items_string.append(_item_name_or_number_str)
                 else: break
-            
             _positions = []
-            
             for _item_string in _new_items_string:
-                _item_number = order.Item.find_item(_item_string)
-                _positions.append(item_cache.get_item(_item_number))
-
+                _local_item_number = order.Item.find_item(_item_string)
+                _positions.append(item_cache.get_item(_local_item_number))
             _new_total = input("        Neues Total:\n")
-
             _new_order = order.Order(positions=_positions, total=float(_new_total))
-            order_cache.update_cached_order(order_cache.get_order(_item_number), _new_order)
-            
-        if _menu_item == "3":
-            _item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:\n")
-            order_cache.remove_order_from_cache(order_cache.get_order(_item_number))
-            
-        if _menu_item == "4":
+            order_cache.update_cached_order(order_cache.get_order(_local_item_number), _new_order)
+        elif _menu_item == "3":
+            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:\n")
+            order_cache.remove_order_from_cache(order_cache.get_order(_local_item_number))
+        elif _menu_item == "4":
             order_cache.print_order_db()
-            
-        if _menu_item == "5":
+        elif _menu_item == "5":
             item_management_menu_loop(item_cache=item_cache)
-
-        if _menu_item == "6":
+        elif _menu_item == "6":
             main.main_menu_loop()
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")
-            
-            
 def item_management_menu_loop(item_cache: itemcache):
     _menu_string = """
         ##########################################################################################################
@@ -318,34 +304,24 @@ def item_management_menu_loop(item_cache: itemcache):
         5. Zurück zum Hauptmenü
         ##########################################################################################################
     """
-
     printer.Printer.clear_cli()
-    
     while True:
         print(_menu_string)
-        
         _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt:\n")
-        
         if _menu_item == "1":
             _name = input("        Bitte geben sie den Namen der Ware ein:\n")
             _unit_price = input("        Bitte geben sie den Stückpreis der Ware ein:\n")
-
             _item = order.Item(item_name=_name, unit_price=_unit_price)
             _item.save_item_to_csv()
             item_cache.add_item_to_cache(_item)
-
         if _menu_item == "2":
             # TODO: implement
             print("da")
-            
         if _menu_item == "3":
             # TODO: implement
             print("dub")
-            
         if _menu_item == "4":
             item_cache.print_item_db()
-            
         if _menu_item == "5":
             main.main_menu_loop()
         else: print("        Ungültige Eingabe, bitte versuchen sie es erneut!")
-   
