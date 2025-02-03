@@ -61,8 +61,10 @@ class customercache:
                 if customer_id == _customer.customer_id:
                     _hit = _customer.customer_id
                     _found = True
-                    
+                                        
+
             if _found == True:
+                
                 return _hit
             else: raise CustomerNotFoundException
         except CustomerNotFoundException as exc:
@@ -151,12 +153,14 @@ def customer_management_loop(customer_cache: customercache):
             _customer.save_customer_to_csv()
             _customer_cache.add_customer_to_cache(_customer)
 
+
         if _menu_items == "2":
             # TODO: implement
             _customer_id = input("        Bitte geben sie die Kundenummer des zu bearbeitenden Kunden ein:\n")
             _customer_cache.update_cached_customer()
             
         if _menu_items == "3":
+
             # TODO: implement
             _customer_id = input("        Bitte geben sie die Kundennummer des zu löschenden Kunden ein:\n")
             

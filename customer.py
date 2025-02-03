@@ -6,10 +6,10 @@ class Customer:
     customer_id_set = set()
     _customer_id_counter = 0
     
-    def __init__(self, lastname: str, name: str, company: str, street: str, house_number: str, postcode: str, city: str, customer_id = ""):
+    def __init__(self, lastname: str, name: str, company: str, street: str, house_number: str, postcode: str, city: str, customer_id = 0):
         self.customer_id = customer_id
 
-        if customer_id == "":
+        if customer_id == 0:
             Customer._customer_id_counter += 1
             self.customer_id = Customer._customer_id_counter
             Customer.customer_id_set.add(Customer._customer_id_counter)
@@ -89,7 +89,7 @@ class Customer:
             with open(_customer_csv, "r") as input_csv_file, open(_temp_customer_csv, "w") as output_csv_file:
                 lines = input_csv_file.readlines()
                 for line in lines:
-                    if line.strip("\n") != f"{self.customer_id};{self.name};{self.name};{self.company};{self._street};{self._house_number};{self._postcode};{self._city}":
+                    if line.strip("\n") != f"{self.customer_id};{self.lastname};{self.name};{self.company};{self._street};{self._house_number};{self._postcode};{self._city}":
                         output_csv_file.write(line)
             os.remove("./Datenbanken/kunden.csv")
             _temp_customer_csv.rename("./Datenbanken/kunden.csv")
