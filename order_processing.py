@@ -183,6 +183,11 @@ class OrderCache:
             if (_order._customer == _customer):
                 print(_order)
                 
+    def get_order(self, order_id: int):
+        for _order in self._order_cache:
+            assert type(_order) == order.Order
+            if _order.order_id == order_id:
+                return _order                
                 
     def add_order_to_cache(self, order: order.Order):
         self._order_cache.add(order)
@@ -191,7 +196,7 @@ class OrderCache:
         self._order_cache.pop(order)
         
     def update_cached_order(self, old: order.Order, new: order.Order):
-        self._order_cache.pop(old)
+        self._order_cache.remove(old)
         self._order_cache.add(new)
         
     def print_order_db(self):
@@ -259,49 +264,11 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
             if _customer == None:
                 continue
 
-            _adding_positions = True
-            _position_value_str_int = []
-            _positions = []
-
-            while _adding_positions:
-                _count = None
-                _position_valid = True
-
-                _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):")
-                if _item_name_or_number_str == "fertig":
-                    print("        Keine weiteren Items.")
-                    break
-
-                _count_str = input("        Stück:")
-                try:
-                    _count = int(_count_str)
-                except ValueError as exc:
-                    exc.add_note("        Die eingegebene Stückzahl ist ungültig!")
-                    print(exc, exc.__notes__)
-                    continue
-                
-                if _item_name_or_number_str != "" and _position_valid:
-                    _position_value_str_int.append([_item_name_or_number_str, _count])
-                else:
-                    print("        Position lässt sich aus den Angaben nicht erzeugen!")
-                    continue
-
-            for _position_value in _position_value_str_int:
-                try:
-                    item_number = int(_position_value[0])
-                    item = item_cache.get_item(item_number)
-                except ValueError:
-                    item_name = _position_value[0]
-                    item_number = item_cache.find_item_number(item_name)
-                    item = item_cache.get_item(item_number)
-                    
-                if item is not None:
-                    position = order.Position(item, _position_value[1])
-                    _positions.append(position)
-                else:
-                    print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")
-                    
-            if _positions:
+            _positions = get_order_positions(item_cache)
+            
+            if _positions == None:
+                print("        Fehler: Positionen konnten nicht erstellt werden")
+            else:
                 if _customer:
                     _order = order.Order(
                         customer=_customer,
@@ -312,27 +279,28 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
                     print("        Auftrag erfolgreich erstellt")
                 else:
                     print("        Fehler: Kunde nicht gefunden")
-            else:
-                print("        Fehler: Keine gültigen Positionen eingegeben")
+                    
+            
 
         elif _menu_item == "2":
-            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu bearbeitenden Auftrags ein!\n")
-            _new_items_string = []
-            while True:
-                _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):\n")
-                _count_str = input("        Stückzahl:\n")
-                if _item_name_or_number_str != "":
-                    _new_items_string.append(_item_name_or_number_str)
-                else: break
-            _positions = []
-            for _item_string in _new_items_string:
-                _local_item_number = order.Item.find_item(_item_string)
-                _positions.append(item_cache.get_item(_local_item_number))
-            _new_total = input("        Neues Total:\n")
-            _new_order = order.Order(positions=_positions, total=float(_new_total))
-            order_cache.update_cached_order(order_cache.get_order(_local_item_number), _new_order)
+            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu bearbeitenden Auftrags ein:")
+            
+            _unmodified_order = order_cache.get_order(int(_local_item_number))
+            
+            print(f"DEBUG: _unmodified_order: {_unmodified_order}")
+            
+            if _unmodified_order == None:
+                pass
+            else:
+                _new_positions = get_order_positions(item_cache)
+                if _new_positions == None:
+                    print("        Fehler: Positionen konnten nicht erzeugt werden")                
+                else:
+                    _new_order = order.Order(customer=_unmodified_order._customer, positions=_new_positions, order_id=_unmodified_order.order_id, state=_unmodified_order._state)
+                    order_cache.update_cached_order(_unmodified_order, _new_order)
+
         elif _menu_item == "3":
-            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:\n")
+            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:")
             order_cache.remove_order_from_cache(order_cache.get_order(_local_item_number))
         elif _menu_item == "4":
             order_cache.print_order_db()
@@ -378,3 +346,51 @@ def item_management_menu_loop(item_cache: ItemCache):
         if _menu_item == "5":
             _item_management = False
         else: print("        Ungültige Eingabe, bitte versuchen sie es erneut!")
+
+
+def get_order_positions(item_cache: ItemCache):
+    _adding_positions = True
+    _position_value_str_int = []
+    _positions = []
+    while _adding_positions:
+        _count = None
+        _position_valid = True
+        _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):")
+        if _item_name_or_number_str == "fertig":
+            print("        Keine weiteren Items.")
+            break
+        _count_str = input("        Stück:")
+        try:
+            _count = int(_count_str)
+        except ValueError as exc:
+            exc.add_note("        Die eingegebene Stückzahl ist ungültig!")
+            print(exc, exc.__notes__)
+            continue
+        
+        if _item_name_or_number_str != "" and _position_valid:
+            _position_value_str_int.append([_item_name_or_number_str, _count])
+        else:
+            print("        Position lässt sich aus den Angaben nicht erzeugen!")
+            continue
+        
+    for _position_value in _position_value_str_int:
+        try:
+            item_number = int(_position_value[0])
+            item = item_cache.get_item(item_number)
+        except ValueError:
+            item_name = _position_value[0]
+            item_number = item_cache.find_item_number(item_name)
+            item = item_cache.get_item(item_number)
+            
+        if item is not None:
+            print(f"{_position_value[0], type(_position_value[0]), _position_value[1], type(_position_value[1])}")
+            position = order.Position(item_cache.get_item(int(_position_value[0])), _position_value[1])
+            _positions.append(position)
+        else:
+            print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")
+        
+    if _positions:
+        return order.Positions(_positions)
+    else:
+        print("        Fehler: Keine gültigen Positionen eingegeben")
+        return None
