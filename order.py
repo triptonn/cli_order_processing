@@ -172,7 +172,7 @@ class Order:
         
         if _exists:
             with open(_orders_csv, "a") as file:
-                file.write(f"{self.order_id};{self._customer};{self._state};{self._positions}\n")
+                file.write(f"{self.order_id};{self._customer};{self._state.value};{self._positions}\n")
         else:
             _directory = Path("./Datenbanken/")
             _directory_exists = _directory.exists()
@@ -220,7 +220,7 @@ class Order:
             with open(_orders_csv, "r") as input_csv_file, open(_temp_orders_csv, "w") as output_csv_file:
                 lines = input_csv_file.readlines()
                 for line in lines:
-                    if line.strip("\n") != f"{self.order_id};{self._customer};{self._state};{self._positions}":
+                    if line.strip("\n") != f"{self.order_id};{self._customer};{self._state.value};{self._positions}":
                         output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
