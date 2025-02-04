@@ -48,7 +48,8 @@ def user_management_menu_loop():
         2. Benutzer bearbeiten
         3. Benutzer löschen
         4. Benutzerliste ausgeben
-        5. Zurück zum Hauptmenü
+        5. Benutzernummer finden
+        6. Zurück zum Hauptmenü
         ##########################################################################################################
     """
 
@@ -68,6 +69,8 @@ def user_management_menu_loop():
         elif _menu_item == "4":
             pass
         elif _menu_item == "5":
+            pass
+        elif _menu_item == "6":
             _user_management = False
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut")

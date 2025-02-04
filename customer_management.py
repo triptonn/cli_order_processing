@@ -133,13 +133,13 @@ def customer_management_loop(customer_cache: CustomerCache):
         _menu_items = input("        Bitte wählen Sie den gewünschen Menüpunkt:\n")
         
         if _menu_items == "1":
-            _name = input("        Nachname:\n")
-            _lastname = input("        Vorname:\n")
-            _company = input("        Firmenname:\n")
-            _street = input("        Straße:\n")
-            _house_number = input("        Hausnummer:\n")
-            _postcode = input("        Postleitzahl:\n")
-            _city = input("        Ort:\n")
+            _name = input("        Nachname: ")
+            _lastname = input("        Vorname: ")
+            _company = input("        Firmenname: ")
+            _street = input("        Straße: ")
+            _house_number = input("        Hausnummer: ")
+            _postcode = input("        Postleitzahl: ")
+            _city = input("        Ort: ")
             
             _customer = customer.Customer(_name, _lastname, _company, _street, _house_number, _postcode, _city)
             _customer.save_customer_to_csv()
@@ -147,14 +147,48 @@ def customer_management_loop(customer_cache: CustomerCache):
 
 
         if _menu_items == "2":
-            # TODO: implement
             _customer_id = input("        Bitte geben sie die Kundenummer des zu bearbeitenden Kunden ein:\n")
-            _customer_cache.update_cached_customer()
-            
-        if _menu_items == "3":
 
-            # TODO: implement
+            _unmodified_customer = _customer_cache.update_cached_customer(int(_customer_id))
+            
+            if _unmodified_customer == None:
+                pass
+            else:
+                assert type(_unmodified_customer) is customer.Customer
+                
+                _lastname = input("        Nachname: ")
+                _name = input("        Vorname: ")
+                _company = input("        Firmenname: ")
+                _street = input("        Straße: ")
+                _house_number = input("        Hausnummer: ")
+                _postcode = input("        Postleitzahl: ")
+                _city = input("        Ort: ")
+                
+                _new_customer = customer.Customer(
+                    _lastname if _lastname != _unmodified_customer.lastname else _unmodified_customer.lastname,
+                    _name if _name != _unmodified_customer.name else _unmodified_customer.name,
+                    _company if _company != _unmodified_customer.company else _unmodified_customer.company,
+                    _street if _street != _unmodified_customer._street else _unmodified_customer._street,
+                    _house_number if _house_number != _unmodified_customer._house_number else _unmodified_customer._house_number,
+                    _postcode if _postcode != _unmodified_customer._postcode else _unmodified_customer._postcode,
+                    _city if _city != _unmodified_customer._city else _unmodified_customer._city,
+                    _unmodified_customer.customer_id
+                    )
+                
+                customer_cache.update_cached_customer(_unmodified_customer, _new_customer)
+                _unmodified_customer.delete_customer_from_csv()
+                _new_customer.save_customer_to_csv()
+            
+
+        if _menu_items == "3":
             _customer_id = input("        Bitte geben sie die Kundennummer des zu löschenden Kunden ein:\n")
+            _customer_to_delete = customer_cache.get_customer(int(_customer_id))
+            if _customer_to_delete == None:
+                print(f"Zu löschender Kunde {_customer_id} konnte nicht gefunden werden!")
+            else:
+                assert type(_customer_to_delete) == customer.Customer
+                customer_cache.remove_customer_from_cache(_customer_to_delete)
+                _customer_to_delete.delete_customer_from_csv()
             
         if _menu_items == "4":
             _customer_cache.print_customer_db()
@@ -163,7 +197,12 @@ def customer_management_loop(customer_cache: CustomerCache):
             _company = input("        Bitte geben sie den vollständigen Firmennamen ein:\n")
             _name = input("        Bitte geben sie den Nachnamen des Kundenkontakts ein:\n")
             _lastname = input("        Bitte geben sie den Vornamen des Kundenkontakts ein:\n")
-            _customer_cache.find_customer_id(name=_name, vorname=_lastname, firma=_company)
+            _customer_id = _customer_cache.find_customer_id(name=_name, vorname=_lastname, firma=_company)
+
+            if _customer_id == None:
+                print("Kunde konnte nicht gefudnen werden!")
+            else:
+                print(f"Der gesuchte Kunde hat die Kundennummer {_customer_id}")
            
         if _menu_items == "6":
             _customer_management = False
