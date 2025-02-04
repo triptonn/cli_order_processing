@@ -4,7 +4,7 @@ import os
 class User:
     _user_id_set = set()
     _user_number_counter = 0
-    def __init__(self, lastname: str, firstname: str, username: str, password: str, user_id: int = 0):
+    def __init__(self, lastname: str, firstname: str, username_hash: str, password_hash: str, user_id: int = 0):
         self._user_id = user_id
         if user_id == 0:
             User._user_number_counter += 1
@@ -20,8 +20,8 @@ class User:
 
         self._lastname = lastname
         self._firstname = firstname
-        self._username_hash = hash(username)
-        self._password_hash = hash(password)
+        self.username_hash = username_hash
+        self.password_hash = password_hash
         
     def save_user_to_csv(self):
         _user_csv = Path("./Datenbanken/user.csv")
@@ -31,21 +31,37 @@ class User:
         
         if _user_csv_exists:
             with open(_user_csv, "a") as file:
-                file.write(f"{self._user_id};{self._lastname};{self._firstname};{self._username_hash};{self._password_hash}")
+                file.write(f"{self._user_id};{self._lastname};{self._firstname};{self.username_hash};{self.password_hash}\n")
 
         else:
             if not _folder_exists:
                 os.mkdir("./Datenbanken/")
 
             with open(_user_csv, "w") as file:
-                file.write("Userid;Name;Vorname;Benutzernamen(hashed);Passwort(hashed)")
-                file.write(f"{self._user_id};{self._lastname};{self._firstname};{self._username_hash};{self._password_hash}")
+                file.write("Userid;Name;Vorname;Benutzernamen(hashed);Passwort(hashed)\n")
+                file.write(f"{self._user_id};{self._lastname};{self._firstname};{self.username_hash};{self.password_hash}\n")
                 
     def update_user_in_csv(self):
         pass
     
+    def reset_password(self, old_password_hash: str, new_password_hash: str):
+        if old_password_hash != self.password_hash:
+            print("        Falsches Passwort!")
+        elif old_password_hash == self.password_hash:
+            self.password_hash = new_password_hash
+            print("        Passwort neu gesetzt!")
+        
+    
     def delete_user_from_csv(self):
         pass
+    
+    def output_print(self):
+        return f"{self._user_id};{self._lastname};{self._firstname}"
+    
+    def admin_output_print(self):
+        return f"{self._user_id};{self._lastname};{self._firstname};{self.username_hash};{self.password_hash}"
+    
+    
     
     def __repr__(self):
         return repr((self._user_id))

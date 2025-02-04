@@ -23,11 +23,11 @@ class CustomerCache:
                     for _listed_customer in _prep_customer_list:
                         _prep_customer = str.split(_listed_customer, sep=";")
                         _customer_id_exists = customer.Customer.customer_id_set.__contains__(int(_prep_customer[0]))
-                        _customer = customer.Customer(_prep_customer[1],_prep_customer[2],_prep_customer[3],_prep_customer[4],_prep_customer[5],_prep_customer[6],_prep_customer[7],_prep_customer[0])
+                        _customer = customer.Customer(_prep_customer[1],_prep_customer[2],_prep_customer[3],_prep_customer[4],_prep_customer[5],_prep_customer[6],_prep_customer[7],int(_prep_customer[0]))
                         if not _customer_id_exists:
                             self._customer_cache.add(_customer)
                         else:
-                            raise CustomerIDExcpetion(str(_customer), "Kunden ID wird bereits vergeben!")
+                            raise CustomerIDExcpetion(str(_customer), "Kunden ID ist bereits vergeben!")
 
             except CustomerIDExcpetion as exc:
                 print(f"Caught CustomerIDException with custom_kwarg={exc.custom_kwarg}")
@@ -68,19 +68,25 @@ class CustomerCache:
         
 
     def remove_customer_from_cache(self, customer: customer.Customer):
-        self._customer_cache.pop(customer)
+        self._customer_cache.remove(customer)
 
 
     def update_cached_customer(self, old: customer.Customer, new: customer.Customer):
-        self._customer_cache.pop(old)
+        self._customer_cache.remove(old)
         self._customer_cache.add(new)
                  
 
     def print_customer_db(self):
+        for _customer in self._customer_cache:
+            assert type(_customer) == customer.Customer
         _customer_tuple = tuple(self._customer_cache)
-        _customer_list = sorted(_customer_tuple, key=lambda customer: customer.customer_id) 
+
+        _customer_list = sorted(_customer_tuple, key=lambda customer: customer._customer_id) 
         for _customer in _customer_list:
-            print(_customer) 
+            assert type(_customer) is customer.Customer
+            print(_customer.output_print())
+
+        print("")
     
 
     def __iter__(self):
@@ -130,7 +136,7 @@ def customer_management_loop(customer_cache: CustomerCache):
     while _customer_management == True:
         print(_menu_string)
         
-        _menu_items = input("        Bitte wählen Sie den gewünschen Menüpunkt:\n")
+        _menu_items = input("        Bitte wählen Sie den gewünschen Menüpunkt: ")
         
         if _menu_items == "1":
             _name = input("        Nachname: ")
@@ -146,8 +152,8 @@ def customer_management_loop(customer_cache: CustomerCache):
             _customer_cache.add_customer_to_cache(_customer)
 
 
-        if _menu_items == "2":
-            _customer_id = input("        Bitte geben sie die Kundenummer des zu bearbeitenden Kunden ein:\n")
+        elif _menu_items == "2":
+            _customer_id = input("        Bitte geben sie die Kundenummer des zu bearbeitenden Kunden ein: ")
 
             _unmodified_customer = _customer_cache.update_cached_customer(int(_customer_id))
             
@@ -180,8 +186,8 @@ def customer_management_loop(customer_cache: CustomerCache):
                 _new_customer.save_customer_to_csv()
             
 
-        if _menu_items == "3":
-            _customer_id = input("        Bitte geben sie die Kundennummer des zu löschenden Kunden ein:\n")
+        elif _menu_items == "3":
+            _customer_id = input("        Bitte geben sie die Kundennummer des zu löschenden Kunden ein: ")
             _customer_to_delete = customer_cache.get_customer(int(_customer_id))
             if _customer_to_delete == None:
                 print(f"Zu löschender Kunde {_customer_id} konnte nicht gefunden werden!")
@@ -190,21 +196,21 @@ def customer_management_loop(customer_cache: CustomerCache):
                 customer_cache.remove_customer_from_cache(_customer_to_delete)
                 _customer_to_delete.delete_customer_from_csv()
             
-        if _menu_items == "4":
+        elif _menu_items == "4":
             _customer_cache.print_customer_db()
 
-        if _menu_items == "5":
-            _company = input("        Bitte geben sie den vollständigen Firmennamen ein:\n")
-            _name = input("        Bitte geben sie den Nachnamen des Kundenkontakts ein:\n")
-            _lastname = input("        Bitte geben sie den Vornamen des Kundenkontakts ein:\n")
+        elif _menu_items == "5":
+            _company = input("        Bitte geben sie den vollständigen Firmennamen ein: ")
+            _name = input("        Bitte geben sie den Nachnamen des Kundenkontakts ein: ")
+            _lastname = input("        Bitte geben sie den Vornamen des Kundenkontakts ein: ")
             _customer_id = _customer_cache.find_customer_id(name=_name, vorname=_lastname, firma=_company)
 
             if _customer_id == None:
-                print("Kunde konnte nicht gefudnen werden!")
+                print("        Kunde konnte nicht gefudnen werden!")
             else:
-                print(f"Der gesuchte Kunde hat die Kundennummer {_customer_id}")
+                print(f"        Der gesuchte Kunde hat die Kundennummer {_customer_id}")
            
-        if _menu_items == "6":
+        elif _menu_items == "6":
             _customer_management = False
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")

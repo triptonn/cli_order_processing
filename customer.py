@@ -94,6 +94,9 @@ class Customer:
             os.remove("./Datenbanken/kunden.csv")
             _temp_customer_csv.rename("./Datenbanken/kunden.csv")
             
+    def output_print(self):
+        return f"{self.customer_id};{self.lastname};{self.name};{self.company};{self._street};{self._house_number};{self._postcode};{self._city}"
+            
     
     def __repr__(self):
         # return repr((self.customer_id, self.lastname, self.name, self.company, self._street, self._house_number, self._postcode, self._city))

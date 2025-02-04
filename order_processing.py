@@ -202,8 +202,9 @@ class OrderCache:
     def print_order_db(self):
         _order_tuple = tuple(self._order_cache)
         _order_list = sorted(_order_tuple, key=lambda order: order.order_id)
+        print("")
         for _order in _order_list:
-            print(_order)
+            print("        ",_order,sep="")
             
     def __iter__(self):
         for _order in self._order_cache:
@@ -272,7 +273,7 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
                 if _customer:
                     _order = order.Order(
                         customer=_customer,
-                        positions=order.Positions(_positions)
+                        positions=order.Positions(_positions._position_list)
                     )
                     _order.save_order_to_csv()
                     order_cache.add_order_to_cache(_order)
