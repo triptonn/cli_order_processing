@@ -127,7 +127,7 @@ def set_password(user_id: int = 0):
     _password_equal = False
     while not _password_set:
         while not _password_equal:
-            _password_control = input("        Erneut eingeben ('abbruch' um es neu zu versuchen): ")
+            _password_control = getpass.getpass("        Erneut eingeben ('abbruch' um es neu zu versuchen): ")
             if _password == _password_control:
                 _password_set = True
                 _password_equal = True
@@ -174,7 +174,8 @@ def user_management_menu_loop(user_cache: UserCache):
         elif _menu_item == "3":
             pass
         elif _menu_item == "4":
-            pass
+            user_cache.print_user_db()
+
         elif _menu_item == "5":
             pass
         elif _menu_item == "6":
