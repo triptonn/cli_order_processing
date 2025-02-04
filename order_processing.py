@@ -287,8 +287,6 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
             
             _unmodified_order = order_cache.get_order(int(_local_item_number))
             
-            print(f"DEBUG: _unmodified_order: {_unmodified_order}")
-            
             if _unmodified_order == None:
                 pass
             else:
@@ -303,13 +301,23 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
 
         elif _menu_item == "3":
             _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:")
-            order_cache.remove_order_from_cache(order_cache.get_order(_local_item_number))
+            _order_to_delete = order_cache.get_order(int(_local_item_number))
+            if _order_to_delete == None:
+                pass
+            else:
+                assert type(_order_to_delete) is order.Order
+                order_cache.remove_order_from_cache(_order_to_delete)
+                _order_to_delete.delete_order_in_csv()
+
         elif _menu_item == "4":
             order_cache.print_order_db()
+
         elif _menu_item == "5":
             item_management_menu_loop(item_cache=item_cache)
+
         elif _menu_item == "6":
             _order_processing = False
+
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")
             
@@ -357,10 +365,12 @@ def get_order_positions(item_cache: ItemCache):
     while _adding_positions:
         _count = None
         _position_valid = True
+
         _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):")
         if _item_name_or_number_str == "fertig":
             print("        Keine weiteren Items.")
             break
+
         _count_str = input("        Stück:")
         try:
             _count = int(_count_str)
