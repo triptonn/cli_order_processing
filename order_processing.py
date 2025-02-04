@@ -193,7 +193,7 @@ class OrderCache:
         self._order_cache.add(order)
         
     def remove_order_from_cache(self, order: order.Order):
-        self._order_cache.pop(order)
+        self._order_cache.remove(order)
         
     def update_cached_order(self, old: order.Order, new: order.Order):
         self._order_cache.remove(old)
@@ -298,6 +298,8 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
                 else:
                     _new_order = order.Order(customer=_unmodified_order._customer, positions=_new_positions, order_id=_unmodified_order.order_id, state=_unmodified_order._state)
                     order_cache.update_cached_order(_unmodified_order, _new_order)
+                    _unmodified_order.delete_order_in_csv()
+                    _new_order.save_order_to_csv()
 
         elif _menu_item == "3":
             _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:")
