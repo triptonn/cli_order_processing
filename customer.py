@@ -6,16 +6,16 @@ class Customer:
     customer_id_set = set()
     _customer_id_counter = 0
     
-    def __init__(self, lastname: str, name: str, company: str, street: str, house_number: str, postcode: str, city: str, customer_id = 0):
+    def __init__(self, lastname: str, name: str, company: str, street: str, house_number: str, postcode: str, city: str, customer_id: int = 0):
         self.customer_id = customer_id
 
         if customer_id == 0:
             Customer._customer_id_counter += 1
             self.customer_id = Customer._customer_id_counter
-            Customer.customer_id_set.add(Customer._customer_id_counter)
+            Customer.customer_id_set.add(self._customer_id_counter)
         
         else:
-            _customer_id = int(customer_id)
+            _customer_id = customer_id
             if not Customer.customer_id_set.__contains__(_customer_id):
                 Customer.customer_id_set.add(_customer_id)
                 if Customer._customer_id_counter < _customer_id:
