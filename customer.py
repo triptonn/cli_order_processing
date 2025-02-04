@@ -96,9 +96,10 @@ class Customer:
             
     
     def __repr__(self):
-        return repr((self.customer_id, self.lastname, self.name, self.company, self._street, self._house_number, self._postcode, self._city))
+        # return repr((self.customer_id, self.lastname, self.name, self.company, self._street, self._house_number, self._postcode, self._city))
+        return repr((self.customer_id))
     
         
     def __str__(self):
-        return f"Kunde {self.customer_id}: {self.company}, Kontakt: {self.lastname}, {self.name}"
-    
+        # return f"Kunde {self.customer_id}: {self.company}, Kontakt: {self.lastname}, {self.name}"
+        return f"{self.customer_id}"

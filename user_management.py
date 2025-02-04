@@ -1,5 +1,3 @@
-import main
-import printer
 
 
 def user_management_menu_loop():
@@ -15,13 +13,15 @@ def user_management_menu_loop():
         ##########################################################################################################
     """
 
-    while True:
-        printer.Printer.clear_cli()
+
+    # printer.Printer.clear_cli()
+    _user_management = True
+    while _user_management == True:
         print(_menu_string)
         
         _menu_item = input("        Bitte wählen Sie den gewünschen Menüpunkt:\n")
         
         if _menu_item == "4":
-            main.main_menu_loop()
+            _user_management = False
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut")

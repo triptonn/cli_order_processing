@@ -1,10 +1,7 @@
 from pathlib import Path
 import copy
-import os
 
-import main
 import customer
-import printer
 
             
             
@@ -53,16 +50,16 @@ class CustomerCache:
             return _customer.customer_id
                     
 
-    def get_customer(self, customer_id: str):
+    def get_customer(self, customer_id: int):
         try:
             for _customer in self._customer_cache:
                 assert type(_customer) == customer.Customer
                 if customer_id == _customer.customer_id:
                     return copy.copy(_customer)
-            else: raise CustomerNotFoundException
+            else: raise CustomerNotFoundException(f"Customer {customer_id} not found in cache!")
         except CustomerNotFoundException as exc:
-            print(f"Caught CustomerNotFoundException with custom_kwarg={exc.custom_kwarg}")
-
+            # print(f"Caught CustomerNotFoundException: {self._customer_cache},\n{exc, exc.args, exc.with_traceback()}")
+            print(self._customer_cache, type(self._customer_cache))
         return None
 
 
@@ -129,8 +126,8 @@ def customer_management_loop(customer_cache: CustomerCache):
     """
 
     #printer.Printer.clear_cli()
-
-    while True:
+    _customer_management = True
+    while _customer_management == True:
         print(_menu_string)
         
         _menu_items = input("        Bitte wählen Sie den gewünschen Menüpunkt:\n")
@@ -169,6 +166,6 @@ def customer_management_loop(customer_cache: CustomerCache):
             _customer_cache.find_customer_id(name=_name, vorname=_lastname, firma=_company)
            
         if _menu_items == "6":
-            main.main_menu_loop()
+            _customer_management = False
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")

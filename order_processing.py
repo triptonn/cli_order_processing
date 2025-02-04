@@ -1,88 +1,8 @@
 from pathlib import Path
 import copy
-import main
 import order
 import customer_management
-import printer
             
-
-class OrderCache:
-    _order_cache = set()
-    
-    def __init__(self):
-        _prep_order_str_list = []
-        _path = Path("./Datenbanken/orders.csv")
-        _order_csv_exists = _path.exists()
-        if _order_csv_exists:
-            try:
-                with open(_path, "r") as _orderdb:
-                    lines = _orderdb.readlines()
-                    lines.pop(0)
-                    for line in lines:
-                        print(line)
-                        _prep_order_str_list.append(line.strip("\n"))
-
-                    for _listed_order in _prep_order_str_list:
-                        _prep_order = str.split(_listed_order, sep=";")
-                        print(_prep_order)
-                        _order_id_exists = order.Order.order_id_set.__contains__(int(_prep_order[0]))
-                        _order = order.Order(_prep_order[1],_prep_order[3],_prep_order[0],_prep_order[2])
-                        if not _order_id_exists:
-                            print(f"Order {int(_prep_order)} initialized")
-                            self._order_cache.add(_order)
-                        else:
-                            raise OrderIDException(str(_order), "Order ID ist bereits vergeben!")
-
-            except OrderIDException as exc:
-                print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
-            except Exception as exc:
-                print(f"Unknown Exception caught during order cache initialization: {exc}")
-                
-    
-    def find_order(self, customer = ""):
-        _customer = ""
-        if customer != "": _customer = customer
-        
-        for _order in self._order_cache:
-            assert type(_order) == order.Order
-            
-            if (_order._customer == _customer):
-                print(_order)
-                
-                
-    def add_order_to_cache(self, order: order.Order):
-        self._order_cache.add(order)
-        
-    def remove_order_from_cache(self, order: order.Order):
-        self._order_cache.pop(order)
-        
-    def update_cached_order(self, old: order.Order, new: order.Order):
-        self._order_cache.pop(old)
-        self._order_cache.add(new)
-        
-    def print_order_db(self):
-        _order_tuple = tuple(self._order_cache)
-        _order_list = sorted(_order_tuple, key=lambda order: order.order_id)
-        for _order in _order_list:
-            print(_order)
-            
-    def __iter__(self):
-        for _order in self._order_cache:
-            return _order
-        
-    def __str__(self):
-        return f"        {self._order_cache}"
-            
-            
-class OrderDBException(Exception):
-    "A base class for OderDBExceptions"
-    
-    
-class OrderIDException(OrderDBException):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args)
-        self.custom_kwarg = kwargs.get('custom_kwarg')
-
 
 class ItemCache:
     _item_cache = set()
@@ -171,8 +91,126 @@ class ItemCache:
         
     def __str__(self):
         return f"        {self._item_cache}"
+
+
+
+
+
+
+class OrderCache:
+    _order_cache = set()
+    
+    def __init__(self, item_cache: ItemCache, customer_cache: customer_management.CustomerCache):
+        _prep_order_str_list = []
+        _path = Path("./Datenbanken/orders.csv")
+        _order_csv_exists = _path.exists()
+        if _order_csv_exists:
+            try:
+                with open(_path, "r") as _orderdb:
+                    lines = _orderdb.readlines()
+                    lines.pop(0)
+                    for line in lines:
+                        _prep_order_str_list.append(line.strip("\n"))
+
+                    for _listed_order in _prep_order_str_list:
+                        _order_positions = []
+                        _order_position_values = []
+                        _prep_order = str.split(_listed_order, sep=";")
+                        _order_id_exists = order.Order.order_id_set.__contains__(int(_prep_order[0]))
+
+                        _order_state = None
+                        match _prep_order[2]:
+                            case "Offen":
+                                _order_state = order.OrderState.OPENED
+                            case "Pausiert":
+                                _order_state = order.OrderState.HALT
+                            case "InArbeit":
+                                _order_state = order.OrderState.WIP
+                            case "Versand":
+                                _order_state = order.OrderState.DONE
+                            case "Bezahlt":
+                                _order_state = order.OrderState.PAYED
+                            case "Geschlossen":
+                                _order_state = order.OrderState.CLOSED
+                            case _:
+                                pass
+
+                        _prep_positions = str.split(_prep_order[3], sep="},{")
+                        _prep_positions_index_zero_correct = str.split(_prep_positions[0], sep="[{")
+                        _index_zero_correction = _prep_positions_index_zero_correct[1] # first position
+                        _first_position_values = tuple(str.split(_index_zero_correction, sep=","))
+
+                        _order_position_values.append(_first_position_values)
+
+                        _middle_indices = _prep_positions[1:len(_prep_positions) - 1]
+                        
+                        for pos in _middle_indices:
+                            _pos = tuple(str.split(str.strip(pos, "'"), sep=","))
+                            _order_position_values.append(_pos)
+                        
+                        _prep_positions_last_index_correction = str.split(_prep_positions[len(_prep_positions) - 1], sep="}")
+                        _last_index_correction = str.strip(_prep_positions_last_index_correction[0], "'")
+                        _last_position_values = tuple(str.split(_last_index_correction, sep=","))
+
+                        _order_position_values.append(_last_position_values)
+
+                        for pos in _order_position_values:
+                            _position = order.Position(item_cache.get_item(int(pos[0])), int(pos[1]))
+                            _order_positions.append(_position)
+
+                        _order = order.Order(customer_cache.get_customer(int(_prep_order[1])),order.Positions(_order_positions),_prep_order[0],_order_state)
+
+                        if not _order_id_exists:
+                            self._order_cache.add(_order)
+                        else:
+                            raise OrderIDException(str(_order), "Order ID ist bereits vergeben!")
+
+            except OrderIDException as exc:
+                print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
+            except AssertionError as err:
+                print(f"Caught AssertionError during order cache initialization: {err, err.with_traceback()}")
+            except Exception as exc:
+                print(f"Unknown Exception caught during order cache initialization: {exc, exc.with_traceback()}")
+                
+    
+    def find_order(self, customer = ""):
+        _customer = ""
+        if customer != "": _customer = customer
+        
+        for _order in self._order_cache:
+            assert type(_order) == order.Order
             
+            if (_order._customer == _customer):
+                print(_order)
+                
+                
+    def add_order_to_cache(self, order: order.Order):
+        self._order_cache.add(order)
+        
+    def remove_order_from_cache(self, order: order.Order):
+        self._order_cache.pop(order)
+        
+    def update_cached_order(self, old: order.Order, new: order.Order):
+        self._order_cache.pop(old)
+        self._order_cache.add(new)
+        
+    def print_order_db(self):
+        _order_tuple = tuple(self._order_cache)
+        _order_list = sorted(_order_tuple, key=lambda order: order.order_id)
+        for _order in _order_list:
+            print(_order)
             
+    def __iter__(self):
+        for _order in self._order_cache:
+            return _order
+        
+    def __str__(self):
+        return f"        {self._order_cache}"
+    
+    
+class OrderDBException(Exception):
+    "A base class for OderDBExceptions"
+    
 class ItemNumberException(OrderDBException):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
@@ -183,6 +221,16 @@ class ItemNotFoundException(OrderDBException):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
         self.custom_kwarg = kwargs.get('custom_kwarg')
+            
+    
+    
+class OrderIDException(OrderDBException):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get('custom_kwarg')
+            
+        
+        
 
 
 def order_processing_menu_loop(customer_cache: customer_management.CustomerCache, order_cache: OrderCache, item_cache: ItemCache):
@@ -199,7 +247,8 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
         ##########################################################################################################
     """
     #printer.Printer.clear_cli()
-    while True:
+    _order_processing = True
+    while _order_processing == True:
         print(_menu_string)
         _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt:")
 
@@ -226,7 +275,6 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
                 _count_str = input("        Stück:")
                 try:
                     _count = int(_count_str)
-                    print(f"DEBUG: Count: {_count}, Type: {type(_count)}")
                 except ValueError as exc:
                     exc.add_note("        Die eingegebene Stückzahl ist ungültig!")
                     print(exc, exc.__notes__)
@@ -291,7 +339,7 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
         elif _menu_item == "5":
             item_management_menu_loop(item_cache=item_cache)
         elif _menu_item == "6":
-            main.main_menu_loop()
+            _order_processing = False
         else:
             print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")
             
@@ -309,7 +357,8 @@ def item_management_menu_loop(item_cache: ItemCache):
         ##########################################################################################################
     """
     #printer.Printer.clear_cli()
-    while True:
+    _item_management = True
+    while _item_management == True:
         print(_menu_string)
         _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt:\n")
         if _menu_item == "1":
@@ -327,5 +376,5 @@ def item_management_menu_loop(item_cache: ItemCache):
         if _menu_item == "4":
             item_cache.print_item_db()
         if _menu_item == "5":
-            main.main_menu_loop()
+            _item_management = False
         else: print("        Ungültige Eingabe, bitte versuchen sie es erneut!")
