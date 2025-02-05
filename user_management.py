@@ -23,7 +23,7 @@ class UserCache:
                     for _listed_user in _prep_user_list:
                         _prep_user = str.split(_listed_user, sep=";")
                         _user_id_exists = user.User._user_id_set.__contains__(int(_prep_user[0]))
-                        _user = user.User(_prep_user[1],_prep_user[2],_prep_user[3],_prep_user[4],int(_prep_user[0]))
+                        _user = user.User(_prep_user[1],_prep_user[2],bytes.fromhex(_prep_user[3]),bytes.fromhex(_prep_user[4]),int(_prep_user[0]))
                         if not _user_id_exists:
                             print(f"DEBUG: User {_user.admin_output_print()} added to cache")
                             self.user_cache.add(_user)
@@ -103,7 +103,8 @@ class UserIDException(UserDBException):
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
-def user_management_menu_loop(user_cache: UserCache):
+def user_management_menu_loop(user_cache: UserCache, authenticated_user: authentication.AuthenticatedUser):
+
     _menu_string = """
         ##########################################################################################################
         Benutzerverwaltung
@@ -127,11 +128,16 @@ def user_management_menu_loop(user_cache: UserCache):
         if _menu_item == "1":
             _lastname = input("        Nachname: ")
             _name = input("        Vorname: ")
+
+            _username = authenticated_user._authenticator.set_username() 
+            _password = authenticated_user._authenticator.set_password()
             
-            _user_name_hash = authentication.Authenticator.set_username() 
-            _password_hash = authentication.Authenticator.set_password()
-                    
-            _user = user.User(_lastname, _name, _user_name_hash, _password_hash)
+            _authenticator = authentication.Authenticator(_username)
+            _username_hash = _authenticator.custom_hash(_username)
+            _password_hash = _authenticator.custom_hash(_password)
+
+            _user = user.User(_lastname, _name, _username_hash.hex(), _password_hash.hex())
+
             _user.save_user_to_csv()
             user_cache.add_user_to_cache(_user)
 

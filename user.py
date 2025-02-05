@@ -22,7 +22,6 @@ class User:
             User._user_number_counter += 1
             self._user_id = self._user_number_counter
             self._user_id_set.add(1)
-            self.save_user_to_csv()
 
         else:
             _user_id = user_id

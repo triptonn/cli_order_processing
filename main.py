@@ -9,12 +9,12 @@ import user
 
 
 class MainMenu:
-    def __init__(self):
+    def __init__(self, authenticated_user: authentication.AuthenticatedUser):
         self._initialized = False
-
+        self._authenticated_user = authenticated_user
+        
     def main_menu_loop(self, user_cache: user_management.UserCache):
         if self._initialized == False:
-            
             customer_cache = customer_management.CustomerCache()
             item_cache = order_processing.ItemCache()
             order_cache = order_processing.OrderCache(item_cache, customer_cache)
@@ -44,7 +44,7 @@ class MainMenu:
                 customer_management.customer_management_loop(customer_cache)
 
             if _menu_item == "3":
-                user_management.user_management_menu_loop(user_cache)
+                user_management.user_management_menu_loop(user_cache, self._authenticated_user)
 
             if _menu_item == "4":
                 print("Das Programm wird beendet!")
@@ -55,58 +55,85 @@ class MainMenu:
 class LoginMenu:
     _logged_in = False
     _authenticator = None
+    _username_hash = None
+    _password_hash = None
 
     def __init__(self, user_cache: user_management.UserCache):
         self._user_cache = user_cache
 
-        # on first login
         if len(user_cache.user_cache) == 0:
             _lastname = "Doe"
             _name = "John"
             _username = "admin"
-            _initial_password = "12345678"
             _admin_otp = -1
 
-            self._authenticator = authentication.Authenticator(_username, user_cache)
-            _username_hash = self._authenticator.custom_hash(_username)
-            _password_hash = self._authenticator.custom_hash(_initial_password)
-            print(f"DEBUG: str, hashed str: {_username}, {_username_hash}")
+            info_text = """
+            ##########################################################################################################
+            Herzlich Wilkommen
+            
+            Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...                                                                                                      
 
+            ##########################################################################################################
+            """
+            
+            print(info_text)
+
+            self._authenticator = authentication.Authenticator(_username)
+            _username_hash = self._authenticator.custom_hash(_username)
+            _password = self._authenticator.set_password(_admin_otp)
+            _password_hash = self._authenticator.custom_hash(_password)
 
             _admin = user.User(_lastname, _name, _username_hash.hex(), _password_hash.hex(), _admin_otp)
+            _admin.save_user_to_csv()
+            self._user_cache.add_user_to_cache(_admin)
 
-            self._user_cache.add_user_to_cache(_admin)           
+        else:
+            _user_exists = False
+            while not _user_exists:
+                _username = getpass.getpass("        Benutzername: ")
+                self._authenticator = authentication.Authenticator(_username)
+                _username_hash = self._authenticator.custom_hash(_username)
 
-        # on subsequent logins
+                for _user in user_cache.user_cache:
+                    assert type(_user) is user.User
+                    if _user.username_hash == _username_hash:
+                        print("        User existiert!")
+                        self._username_hash = _username_hash
+                        _user_exists = True
+                    else:
+                        print("        Neuer Versuch...\n")
+                        continue 
 
+                    # def login(self):
+                    while self._logged_in == False:
+                        _password = getpass.getpass("        Passwort: ")
+                        _password_hash = self._authenticator.custom_hash(_password)
+                        for _user in self._user_cache.user_cache:
+                            assert type(_user) is user.User
+                            print(_user.password_hash, _password_hash)
+                            print(_user.password_hash == _password_hash)
+                            if _user.password_hash == _password_hash:
+                                print("        Passwort korrekt!")
+                                self._user = _user
+                                self._logged_in = True
+
+                        if self._logged_in == True:
+                            self._password_hash = _password_hash
 
 
     def login(self):
-        while self._logged_in == False:
-            _username = getpass.getpass("        Benutzername: ")
-            _password = getpass.getpass("        Passwort: ")
-            
-            for _user in self._user_cache.user_cache:
-                assert type(_user) is user.User
-                
-                _user.username_hash                
-
-                print(_user, type(_user))
-
-                print(f"saved username_hash: {_user.username_hash} == {hash(_username)}\nsaved password_hash: {_user.password_hash} == {hash(_password)}\nresult: {_user.username_hash == hash(_username) and _user.password_hash == hash(_password)}")
-                if _user.username_hash == hash(_username) and _user.password_hash == hash(_password):
-                    self._logged_in = True
-                    return authentication.AuthenticatedUser(hash(_username), hash(_password))
+        if self._logged_in == True:
+            return authentication.AuthenticatedUser(self._user, self._username_hash, self._password_hash, self._authenticator)
+        else:
+            pass
 
 
 if __name__ == "__main__":
     user_cache = user_management.UserCache()
     
-    # DEBUG: comment these three lines to deactivate login
-    # login_menu = LoginMenu(user_cache)
-    # _authenticated_user = login_menu.login() 
+    login_menu = LoginMenu(user_cache)
+    _authenticated_user = login_menu.login() 
 
-    # menu = MainMenu(_authenticated_user)
-    menu = MainMenu()
+    menu = MainMenu(_authenticated_user)
     menu.main_menu_loop(user_cache)
     
