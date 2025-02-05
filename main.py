@@ -80,12 +80,22 @@ class LoginMenu:
 
             self._authenticator = authentication.Authenticator(_username)
             _username_hash = self._authenticator.custom_hash(_username)
+            self._username_hash = _username_hash
             _password = self._authenticator.set_password(_admin_otp)
             _password_hash = self._authenticator.custom_hash(_password)
+            self._password_hash = _password_hash
 
             _admin = user.User(_lastname, _name, _username_hash.hex(), _password_hash.hex(), _admin_otp)
             _admin.save_user_to_csv()
             self._user_cache.add_user_to_cache(_admin)
+            self._user = _admin
+            
+            
+            self._logged_in = True
+            _authenticated_user = self.login()
+
+            menu = MainMenu(_authenticated_user)
+            menu.main_menu_loop(user_cache)
 
         else:
             _user_exists = False
