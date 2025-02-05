@@ -41,7 +41,6 @@ class Authenticator:
             
 
         elif self._salt == None and _path_exists:
-            print("        Authenticator init, reading from hashing.csv")
             with open(_path, "r") as file:
                 lines = file.readlines()
                 lines.pop(0)
@@ -51,11 +50,6 @@ class Authenticator:
                     if _str.__contains__("salt"):
                         self._salt = bytes.fromhex(_str[2])
                         print(self._salt)
-
-
-        else:
-            print("        Authenticator init, already initialized")
-            pass
 
 
     def custom_hash(self, value: str):
@@ -116,12 +110,6 @@ class AuthenticatedUser:
         self._user_key = username_hash[32:]
         self._authenticator = authenticator
         
-        print(f"DEBUG: _user: {self._user}")
-        print(f"DEBUG: _random_key: {self._random_key}, len: {len(self._random_key)}")
-        print(f"DEBUG: _user_key: {self._user_key}, len: {len(self._user_key)}")
-        
-        print("DEBUG: _random_key, password_hash: ", len(self._random_key), len(password_hash))
-        
         self._super_hash = scrypt.hash(self._random_key + password_hash, self._salt, N=self._N, p=self._p, r=self._r, buflen=32)
-        
-        print("DEBUG: _random_key + password_hash: ", self._super_hash, len(self._super_hash))
+
+    # this object will carry the user rights granted to the user when the user is authenticated

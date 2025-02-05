@@ -25,7 +25,6 @@ class UserCache:
                         _user_id_exists = user.User._user_id_set.__contains__(int(_prep_user[0]))
                         _user = user.User(_prep_user[1],_prep_user[2],bytes.fromhex(_prep_user[3]),bytes.fromhex(_prep_user[4]),int(_prep_user[0]))
                         if not _user_id_exists:
-                            print(f"DEBUG: User {_user.admin_output_print()} added to cache")
                             self.user_cache.add(_user)
                         else:
                             raise UserIDException(str(_user), "User ID ist bereits vergeben!")
@@ -57,7 +56,7 @@ class UserCache:
                     return copy.copy(_user)
             else: raise UserNotFoundException(f"User {user_id} not found in cache!")
         except UserNotFoundException as exc:
-            print(f"DEBUG: _user_cache: {self.user_cache}, {type(self.user_cache)}")
+            print(f"Caught UserNotFoundException while fetching user from cache: {exc}")
         return None
     
 
@@ -95,11 +94,13 @@ class UserDBException(Exception):
 class UserNotFoundException(UserDBException):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
+        # TODO:
         self.custom_kwarg = kwargs.get('custom_kwarg')
         
 class UserIDException(UserDBException):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
+        # TODO:
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
@@ -142,13 +143,17 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
             user_cache.add_user_to_cache(_user)
 
         elif _menu_item == "2":
+            # TODO: 
             pass
+
         elif _menu_item == "3":
+            # TODO:
             pass
         elif _menu_item == "4":
             user_cache.print_user_db()
 
         elif _menu_item == "5":
+            # TODO:
             pass
         elif _menu_item == "6":
             _user_management = False

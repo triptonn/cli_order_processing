@@ -13,7 +13,6 @@ class Customer:
             Customer._customer_id_counter += 1
             self.customer_id = Customer._customer_id_counter
             Customer.customer_id_set.add(self._customer_id_counter)
-        
         else:
             _customer_id = customer_id
             if not Customer.customer_id_set.__contains__(_customer_id):
@@ -40,14 +39,11 @@ class Customer:
         if _exists:
             with open(_customer_csv, "a") as file:
                 file.write(f"{self.customer_id};{self.name};{self.name};{self.company};{self._street};{self._house_number};{self._postcode};{self._city};\n")
-
         else:
             os.mkdir("./Datenbanken/")
             with open(_customer_csv, "w") as file:
                 file.write("Kundennummer;Name;Vorname;Firma;Strasse;Hausnummer;Postleitzahl;Ort\n")
                 file.write(f"{self.customer_id};{self.name};{self.name};{self.company};{self._street};{self._house_number};{self._postcode};{self._city};\n")
-
-        
                 
     def update_customer_in_csv(self, lastname = "", name = "", company = "", street = "", house_number = "", postcode = "", city = ""):
         _lastname = lastname
@@ -96,13 +92,11 @@ class Customer:
             
     def output_print(self):
         return f"{self.customer_id};{self.lastname};{self.name};{self.company};{self._street};{self._house_number};{self._postcode};{self._city}"
-            
     
     def __repr__(self):
         # return repr((self.customer_id, self.lastname, self.name, self.company, self._street, self._house_number, self._postcode, self._city))
         return repr((self.customer_id))
-    
-        
+            
     def __str__(self):
         # return f"Kunde {self.customer_id}: {self.company}, Kontakt: {self.lastname}, {self.name}"
         return f"{self.customer_id}"

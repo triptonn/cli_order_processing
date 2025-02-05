@@ -77,7 +77,6 @@ class ItemCache:
         
         
     def print_item_db(self):
-        print(f"DEBUG: {self._item_cache}")
         _item_tuple = tuple(self._item_cache)
         _item_list = sorted(_item_tuple, key=lambda item: item.item_number)
         for _item in _item_list:
@@ -346,12 +345,23 @@ def item_management_menu_loop(item_cache: ItemCache):
             _item = order.Item(item_name=_name, unit_price=_unit_price)
             _item.save_item_to_csv()
             item_cache.add_item_to_cache(_item)
+
         if _menu_item == "2":
-            # TODO: implement
-            print("da")
+            _item_number = input("        Bitte geben sie die Artikelnummer des Artikels an: ")
+            _old_item = item_cache.get_item(int(_item_number))
+            print(f"        Bisheriger Stückpreis: {_old_item.unit_price}")
+            _new_unit_price = input("        Bitte geben sie den neuen Stückpreis ein: ")
+            _new_item = order.Item(_old_item.item_name, _new_unit_price, _old_item.item_number)
+            item_cache.update_cached_item(_old_item, _new_item)
+            print("        Artikel wurde aktualisiert!")
+
         if _menu_item == "3":
-            # TODO: implement
-            print("dub")
+            _item_number = input("        Bitte geben sie die Artikelnummer des zu löschenden Artikels ein: ")
+            _item = item_cache.get_item(int(_item_number))
+            _item.delete_item_form_csv()
+            item_cache.remove_item_from_cache(_item)
+            print("        Artikel wurde erfolgreich aus dem System gelöscht!")
+
         if _menu_item == "4":
             item_cache.print_item_db()
         if _menu_item == "5":

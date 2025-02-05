@@ -31,7 +31,6 @@ class User:
                     User._user_number_counter = _user_id
 
             self._user_id = _user_id
-
         
     def save_user_to_csv(self):
         _user_csv = Path("./Datenbanken/user.csv")
@@ -52,6 +51,7 @@ class User:
                 file.write(f"{self._user_id};{self._lastname};{self._firstname};{self.username_hash};{self.password_hash}\n")
                 
     def update_user_in_csv(self):
+        # TODO:
         pass
     
     def reset_password(self, old_password_hash: str, new_password_hash: str):
@@ -60,9 +60,9 @@ class User:
         elif old_password_hash == self.password_hash:
             self.password_hash = new_password_hash
             print("        Passwort neu gesetzt!")
-        
     
     def delete_user_from_csv(self):
+        # TODO:
         pass
     
     def output_print(self):
@@ -70,8 +70,6 @@ class User:
     
     def admin_output_print(self):
         return f"{self._user_id};{self._lastname};{self._firstname};{self.username_hash};{self.password_hash}"
-    
-    
     
     def __repr__(self):
         return repr((self._user_id))

@@ -3,8 +3,6 @@ from enum import Enum
 import os
 
 import customer
-
-
     
 class Item:
     item_number_set = set()
@@ -88,7 +86,6 @@ class Item:
         return f"{self.item_number},{self.item_name},{self.unit_price}"
 
 
-
 class Position:
     def __init__(self, item: Item, count: int):
         self.item = item
@@ -125,6 +122,7 @@ class Positions:
 
         _output_str += "]}"
         return _output_str
+
 
 class OrderState(Enum):
     OPENED = "Offen"
@@ -192,7 +190,6 @@ class Order:
                 file.write("Auftragsnummer;Kunde;Status;Positionen\n")
                 file.write(f"{self.order_id};{self._customer};{self._state.value};{self._positions}\n")
                 
-                
     def update_order_in_csv(self, state: OrderState = None, positions: Positions = None):
         _positions = positions
         
@@ -235,7 +232,6 @@ class Order:
                         output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
-    
     
     def __repr__(self):
         return repr((self.order_id, self._customer, self._state, self._positions, self._total_before_discount))
