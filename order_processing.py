@@ -1,7 +1,9 @@
 from pathlib import Path
 import copy
+
 import order
 import customer_management
+import printer
             
 
 class ItemCache:
@@ -79,8 +81,9 @@ class ItemCache:
     def print_item_db(self):
         _item_tuple = tuple(self._item_cache)
         _item_list = sorted(_item_tuple, key=lambda item: item.item_number)
+        print("")
         for _item in _item_list:
-            print(_item)
+            print("       ", _item)
             
             
     def __iter__(self):
@@ -242,13 +245,15 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
     _menu_string = """
         ##########################################################################################################
         Auftragsbearbeitung
-        Menü:
+
+        Menü:                                                                          'c' um Bildschirm zu räumen
         1. Auftrag anlegen
         2. Auftrag bearbeiten
         3. Auftrag löschen
         4. Aufträge ausgeben
         5. Warenverwaltung
         6. Zurück zum Hauptmenü
+        
         ##########################################################################################################
     """
     #printer.Printer.clear_cli()
@@ -318,35 +323,37 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
         elif _menu_item == "6":
             _order_processing = False
 
-        else:
-            print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")
+        elif _menu_item == "c":
+            printer.Printer.clear_cli()
             
             
 def item_management_menu_loop(item_cache: ItemCache):
     _menu_string = """
         ##########################################################################################################
-        Auftragsbearbeitung
-        Menü:
+        Warenverwaltung
+
+        Menü:                                                                          'c' um Bildschirm zu räumen
         1. Ware anlegen
         2. Ware bearbeiten
         3. Ware löschen
         4. Warenliste ausgeben
-        5. Zurück zum Hauptmenü
+        5. Zurück zur Auftragsbearbeitung
+        
         ##########################################################################################################
     """
     #printer.Printer.clear_cli()
     _item_management = True
     while _item_management == True:
         print(_menu_string)
-        _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt:\n")
+        _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt: ")
         if _menu_item == "1":
-            _name = input("        Bitte geben sie den Namen der Ware ein:\n")
-            _unit_price = input("        Bitte geben sie den Stückpreis der Ware ein:\n")
+            _name = input("        Bitte geben sie den Namen der Ware ein: ")
+            _unit_price = input("        Bitte geben sie den Stückpreis der Ware ein: ")
             _item = order.Item(item_name=_name, unit_price=_unit_price)
             _item.save_item_to_csv()
             item_cache.add_item_to_cache(_item)
 
-        if _menu_item == "2":
+        elif _menu_item == "2":
             _item_number = input("        Bitte geben sie die Artikelnummer des Artikels an: ")
             _old_item = item_cache.get_item(int(_item_number))
             print(f"        Bisheriger Stückpreis: {_old_item.unit_price}")
@@ -355,18 +362,21 @@ def item_management_menu_loop(item_cache: ItemCache):
             item_cache.update_cached_item(_old_item, _new_item)
             print("        Artikel wurde aktualisiert!")
 
-        if _menu_item == "3":
+        elif _menu_item == "3":
             _item_number = input("        Bitte geben sie die Artikelnummer des zu löschenden Artikels ein: ")
             _item = item_cache.get_item(int(_item_number))
             _item.delete_item_form_csv()
             item_cache.remove_item_from_cache(_item)
             print("        Artikel wurde erfolgreich aus dem System gelöscht!")
 
-        if _menu_item == "4":
+        elif _menu_item == "4":
             item_cache.print_item_db()
-        if _menu_item == "5":
+
+        elif _menu_item == "5":
             _item_management = False
-        else: print("        Ungültige Eingabe, bitte versuchen sie es erneut!")
+
+        elif _menu_item == "c":
+            printer.Printer.clear_cli()
 
 
 def get_order_positions(item_cache: ItemCache):
@@ -377,12 +387,12 @@ def get_order_positions(item_cache: ItemCache):
         _count = None
         _position_valid = True
 
-        _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden):")
+        _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden): ")
         if _item_name_or_number_str == "fertig":
             print("        Keine weiteren Items.")
             break
 
-        _count_str = input("        Stück:")
+        _count_str = input("        Stück: ")
         try:
             _count = int(_count_str)
         except ValueError as exc:

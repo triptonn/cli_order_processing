@@ -5,6 +5,7 @@ from os import urandom
 from os import mkdir
 
 import user
+import printer
 
 
 class Authenticator:
@@ -21,16 +22,13 @@ class Authenticator:
         _path_exists = _path.exists()
 
         if self._salt == None and not _path_exists:
-            print("        First time authenticator init")
             self._id_counter += 1
             
             _directory_path = Path("./.secrets/")
             _directory_path_exists = _directory_path.exists()
             
             _salt = urandom(16)
-            print(_salt, type(_salt), len(_salt))
             self._salt = _salt
-            print(_salt)
 
             if not _directory_path_exists:
                mkdir(_directory_path)
@@ -49,7 +47,6 @@ class Authenticator:
                     _str = _prep_line.split(";")
                     if _str.__contains__("salt"):
                         self._salt = bytes.fromhex(_str[2])
-                        print(self._salt)
 
 
     def custom_hash(self, value: str):
@@ -73,6 +70,7 @@ class Authenticator:
                     return _username
                 elif _username_control == "abbruch":
                     break
+                printer.Printer.clear_cli()
 
     def set_password(self, user_id: int = 0):
         if user_id == -1:
@@ -89,13 +87,13 @@ class Authenticator:
             while not _password_equal:
                 _password_control = getpass.getpass("        Passwort erneut eingeben: ")
                 _password_set = True
-
                 if _password == _password_control:
                     print("        Passwortvergabe erfolgreich!")
                     _password_equal = True
                     return _password
                 elif _password_control == "abbruch":
                     break
+                printer.Printer.clear_cli()
 
 
 class AuthenticatedUser:

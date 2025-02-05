@@ -2,6 +2,7 @@ from pathlib import Path
 import copy
 
 import customer
+import printer
             
             
 class CustomerCache:
@@ -81,9 +82,10 @@ class CustomerCache:
         _customer_tuple = tuple(self._customer_cache)
 
         _customer_list = sorted(_customer_tuple, key=lambda customer: customer.customer_id) 
+        print("")
         for _customer in _customer_list:
             assert type(_customer) is customer.Customer
-            print(_customer.output_print())
+            print("       ", _customer.output_print())
 
         print("")
     
@@ -120,13 +122,15 @@ def customer_management_loop(customer_cache: CustomerCache):
     _menu_string = """
         #########################################################################################################
         Kundendatenbank
-        Menü:
+        
+        Menü:                                                                          'c' um Bildschirm zu räumen
         1. Neuen Kunden anlegen
         2. Kunden bearbeiten
         3. Kunden löschen
         4. Kundenliste ausgeben
         5. Kundennummer finden
         6. Zurück zum Hauptmenü
+        
         ##########################################################################################################
     """
 
@@ -135,9 +139,9 @@ def customer_management_loop(customer_cache: CustomerCache):
     while _customer_management == True:
         print(_menu_string)
         
-        _menu_items = input("        Bitte wählen Sie den gewünschen Menüpunkt: ")
+        _menu_item = input("        Bitte wählen Sie den gewünschen Menüpunkt: ")
         
-        if _menu_items == "1":
+        if _menu_item == "1":
             _name = input("        Nachname: ")
             _lastname = input("        Vorname: ")
             _company = input("        Firmenname: ")
@@ -151,7 +155,7 @@ def customer_management_loop(customer_cache: CustomerCache):
             _customer_cache.add_customer_to_cache(_customer)
 
 
-        elif _menu_items == "2":
+        elif _menu_item == "2":
             _customer_id = input("        Bitte geben sie die Kundenummer des zu bearbeitenden Kunden ein: ")
 
             _unmodified_customer = _customer_cache.update_cached_customer(int(_customer_id))
@@ -185,7 +189,7 @@ def customer_management_loop(customer_cache: CustomerCache):
                 _new_customer.save_customer_to_csv()
             
 
-        elif _menu_items == "3":
+        elif _menu_item == "3":
             _customer_id = input("        Bitte geben sie die Kundennummer des zu löschenden Kunden ein: ")
             _customer_to_delete = customer_cache.get_customer(int(_customer_id))
             if _customer_to_delete == None:
@@ -195,10 +199,10 @@ def customer_management_loop(customer_cache: CustomerCache):
                 customer_cache.remove_customer_from_cache(_customer_to_delete)
                 _customer_to_delete.delete_customer_from_csv()
             
-        elif _menu_items == "4":
+        elif _menu_item == "4":
             _customer_cache.print_customer_db()
 
-        elif _menu_items == "5":
+        elif _menu_item == "5":
             _company = input("        Bitte geben sie den vollständigen Firmennamen ein: ")
             _name = input("        Bitte geben sie den Nachnamen des Kundenkontakts ein: ")
             _lastname = input("        Bitte geben sie den Vornamen des Kundenkontakts ein: ")
@@ -209,7 +213,8 @@ def customer_management_loop(customer_cache: CustomerCache):
             else:
                 print(f"        Der gesuchte Kunde hat die Kundennummer {_customer_id}")
            
-        elif _menu_items == "6":
+        elif _menu_item == "6":
             _customer_management = False
-        else:
-            print("        Ungültige Eingabe, bitte versuchen Sie es erneut!")
+
+        elif _menu_item == "c":
+            printer.Printer.clear_cli()

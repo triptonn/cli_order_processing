@@ -1,11 +1,11 @@
 import getpass
-import copy
 
 import authentication
 import order_processing
 import customer_management 
 import user_management
 import user
+import printer
 
 
 class MainMenu:
@@ -21,36 +21,40 @@ class MainMenu:
             self._initialized = True
 
         menu_text = """
-            ##########################################################################################################
-            Herzlich Wilkommen
-            Menü:
-            1. Auftragsbearbeitung
-            2. Kundendatenbank
-            3. Benutzerverwaltung
-            4. Programm beenden
-            ##########################################################################################################
+        ##########################################################################################################
+        Herzlich Wilkommen
+        
+        Menü:                                                                          'c' um Bildschirm zu räumen
+        1. Auftragsbearbeitung
+        2. Kundendatenbank
+        3. Benutzerverwaltung
+        4. Programm beenden
+        
+        ##########################################################################################################
         """
 
         #printer.Printer.clear_cli()
         while True:
             print(menu_text)
 
-            _menu_item = input("Bitte wählen Sie den gewünschten Menüpunkt.\n")
+            _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt: ")
 
             if _menu_item == "1":
                 order_processing.order_processing_menu_loop(customer_cache, order_cache, item_cache)
 
-            if _menu_item == "2":
+            elif _menu_item == "2":
                 customer_management.customer_management_loop(customer_cache)
 
-            if _menu_item == "3":
+            elif _menu_item == "3":
                 user_management.user_management_menu_loop(user_cache, self._authenticated_user)
 
-            if _menu_item == "4":
-                print("Das Programm wird beendet!")
+            elif _menu_item == "4":
+                print("        Das Programm wird beendet!")
                 quit()
-            else:
-                print("Ungültige Eingabe, bitte versuchen Sie es erneut!")
+            
+            elif _menu_item == "c":
+                printer.Printer.clear_cli()            
+
                 
 class LoginMenu:
     _logged_in = False
@@ -68,19 +72,21 @@ class LoginMenu:
             _admin_otp = -1
 
             info_text = """
-            ##########################################################################################################
-            Herzlich Wilkommen
-            
-            Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...                                                                                                      
-
-            ##########################################################################################################
+        ##########################################################################################################
+        Herzlich Wilkommen
+        
+        Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...                                                                                                      
+        ##########################################################################################################
             """
-            
+
+            printer.Printer.clear_cli()
+
             print(info_text)
 
             self._authenticator = authentication.Authenticator(_username)
             _username_hash = self._authenticator.custom_hash(_username)
             self._username_hash = _username_hash
+            
             _password = self._authenticator.set_password(_admin_otp)
             _password_hash = self._authenticator.custom_hash(_password)
             self._password_hash = _password_hash
@@ -100,19 +106,19 @@ class LoginMenu:
         else:
             _user_exists = False
             while not _user_exists:
+                printer.Printer.clear_cli()
                 _username = getpass.getpass("        Benutzername: ")
                 self._authenticator = authentication.Authenticator(_username)
                 _username_hash = self._authenticator.custom_hash(_username)
 
                 for _user in user_cache.user_cache:
                     assert type(_user) is user.User
-                    if _user.username_hash == _username_hash:
-                        print("        User existiert!")
+                    if _user.username_hash != _username_hash:
+                        continue 
+                    else:
+                        print("        ... User existiert!")
                         self._username_hash = _username_hash
                         _user_exists = True
-                    else:
-                        print("        Neuer Versuch...\n")
-                        continue 
 
                     # def login(self):
                     while self._logged_in == False:
@@ -120,22 +126,17 @@ class LoginMenu:
                         _password_hash = self._authenticator.custom_hash(_password)
                         for _user in self._user_cache.user_cache:
                             assert type(_user) is user.User
-                            print(_user.password_hash, _password_hash)
-                            print(_user.password_hash == _password_hash)
                             if _user.password_hash == _password_hash:
-                                print("        Passwort korrekt!")
+                                print("        ... Passwort korrekt!")
                                 self._user = _user
                                 self._logged_in = True
 
                         if self._logged_in == True:
                             self._password_hash = _password_hash
 
-
     def login(self):
         if self._logged_in == True:
             return authentication.AuthenticatedUser(self._user, self._username_hash, self._password_hash, self._authenticator)
-        else:
-            pass
 
 
 if __name__ == "__main__":
@@ -145,5 +146,6 @@ if __name__ == "__main__":
     _authenticated_user = login_menu.login() 
 
     menu = MainMenu(_authenticated_user)
+    printer.Printer.clear_cli()
     menu.main_menu_loop(user_cache)
     

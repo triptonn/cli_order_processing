@@ -3,6 +3,7 @@ import copy
 
 import authentication
 import user
+import printer
 
 
 class UserCache:
@@ -66,9 +67,11 @@ class UserCache:
         _user_tuple = tuple(self.user_cache)
         
         _user_list = sorted(_user_tuple, key=lambda user: user._user_id)
+
+        print("")
         for _user in _user_list:
             assert type(_user) is user.User
-            print(_user.output_print())
+            print("       ", _user.output_print())
     
     def add_user_to_cache(self, user: user.User):
         self.user_cache.add(user)
@@ -109,13 +112,15 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
     _menu_string = """
         ##########################################################################################################
         Benutzerverwaltung
-        Menü:
+        
+        Menü:                                                                          'c' um Bildschirm zu räumen
         1. Benutzer anlegen
         2. Benutzer bearbeiten
         3. Benutzer löschen
         4. Benutzerliste ausgeben
         5. Benutzernummer finden
         6. Zurück zum Hauptmenü
+        
         ##########################################################################################################
     """
 
@@ -157,5 +162,6 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
             pass
         elif _menu_item == "6":
             _user_management = False
-        else:
-            print("        Ungültige Eingabe, bitte versuchen Sie es erneut")
+            break
+        elif _menu_item == "c":
+            printer.Printer.clear_cli()
