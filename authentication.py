@@ -1,54 +1,75 @@
 from pathlib import Path
 from hashlib import blake2b 
-import hashlib
 import getpass
 from os import urandom
 from os import mkdir
 
+import user_management
+
+
+KEY = b'Thisisanexamplekey'
+
+
 class AuthenticatedUser:
     def __init__(self, username_hash: str, password_hash):
         _super_hash = hash(username_hash * password_hash)
-        print(f"{_super_hash}")
-        
         
 class Authenticator:
     _salt = None
     _id_counter = 0
 
-    def __init__(self, id = 0):
+    def __init__(self, username: str, user_cache: user_management.UserCache):
+        self._username = username
+        self._key = KEY
         _path = Path("./.secrets/hashing.csv")
         _path_exists = _path.exists()
 
         if self._salt == None and not _path_exists:
+            print("        First time authenticator init")
             self._id_counter += 1
             
             _directory_path = Path("./.secrets/")
             _directory_path_exists = _directory_path.exists()
             
             _salt = urandom(16)
+            print(_salt, type(_salt), len(_salt))
             self._salt = _salt
+            print(_salt)
 
             if not _directory_path_exists:
                 mkdir(_directory_path)
 
             with open(_path, "x") as file:
-                file.write("setup_id;salt\n")
-                file.write(f"{self._id_counter};{_salt.hex()}\n")
+                file.write("setting_no;name;value\n")
+                file.write(f"{self._id_counter};salt;{_salt.hex()}\n")
+                self._id_counter += 1
+                file.write(f"{self._id_counter};key;{self._key.hex()}\n")
+            
+            _sec_hash_provider = blake2b(key=self._key, salt=self._salt, person=bytes(self._username))
+            self._sec_hash_provider = _sec_hash_provider
+               
+            
 
         elif self._salt == None and _path_exists:
+            print("        Authenticator init, reading from hashing.csv")
             with open(_path, "r") as file:
                 lines = file.readlines()
-                lines.pop()
+                lines.pop(0)
                 for line in lines:
-                    line.strip("\n")
-                    _str = line.split(";")
-                    print(_str)
+                    _prep_line = line.strip("\n")
+                    _str = _prep_line.split(";")
+                    if _str.__contains__("salt"):
+                        print("Now processing salt", self._salt)
+                        self._salt = bytes.fromhex(_str[1])
+                        _sec_hash_provider = blake2b(salt=self._salt)
+                        self._sec_hash_provider = _sec_hash_provider
+                    elif _str.__cotains__("key"):
+                        print("Now processing key")
+                        pass
+
         else:
+            print("        Authenticator init, already initialized")
             pass
-
-        _sec_hash = blake2b(salt=self._salt)
-
-        print(_sec_hash, type(_sec_hash))
 
 
     def set_username(self, user_id: int = 0):
@@ -61,7 +82,7 @@ class Authenticator:
                 if _username == _username_control:
                     _username_set = True
                     _username_equal = True      
-                    return hash(_username)
+                    return 
                 elif _username_control == "abbruch":
                     break
 
@@ -82,7 +103,3 @@ class Authenticator:
                     return hash(_password)
                 elif _password_control == "abbruch":
                     break
-                
-                
-                
-_authenticator = Authenticator()

@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 
+
 class User:
     _user_id_set = set()
     _user_number_counter = 0

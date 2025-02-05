@@ -4,6 +4,7 @@ import os
 
 import customer
 
+
     
 class Item:
     item_number_set = set()
@@ -85,6 +86,7 @@ class Item:
 
     def __str__(self):
         return f"{self.item_number},{self.item_name},{self.unit_price}"
+
 
 
 class Position:

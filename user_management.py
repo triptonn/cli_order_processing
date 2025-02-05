@@ -1,7 +1,7 @@
 from pathlib import Path
 import copy
 
-import authenticator
+import authentication
 import user
 
 
@@ -128,10 +128,8 @@ def user_management_menu_loop(user_cache: UserCache):
             _lastname = input("        Nachname: ")
             _name = input("        Vorname: ")
             
-            _authenticator = authenticator.Authenticator()
-            
-            _user_name_hash = _authenticator.set_username() 
-            _password_hash = _authenticator.set_password()
+            _user_name_hash = authentication.Authenticator.set_username() 
+            _password_hash = authentication.Authenticator.set_password()
                     
             _user = user.User(_lastname, _name, _user_name_hash, _password_hash)
             _user.save_user_to_csv()
