@@ -7,22 +7,32 @@ class User:
     _user_number_counter = 0
     def __init__(self, lastname: str, firstname: str, username_hash: str, password_hash: str, user_id: int = 0):
         self._user_id = user_id
+
+        self._lastname = lastname
+        self._firstname = firstname
+        self.username_hash = username_hash
+        self.password_hash = password_hash
+
         if user_id == 0:
             User._user_number_counter += 1
             self._user_id = User._user_number_counter
             User._user_id_set.add(self._user_id)
+
+        elif user_id == -1:
+            User._user_number_counter += 1
+            self._user_id = self._user_number_counter
+            self._user_id_set.add(1)
+            self.save_user_to_csv()
+
         else:
             _user_id = user_id
             if not User._user_id_set.__contains__(_user_id):
                 User._user_id_set.add(_user_id)
                 if User._user_number_counter < _user_id:
                     User._user_number_counter = _user_id
+
             self._user_id = _user_id
 
-        self._lastname = lastname
-        self._firstname = firstname
-        self.username_hash = username_hash
-        self.password_hash = password_hash
         
     def save_user_to_csv(self):
         _user_csv = Path("./Datenbanken/user.csv")

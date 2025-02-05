@@ -68,9 +68,15 @@ class LoginMenu:
             _admin_otp = -1
 
             self._authenticator = authentication.Authenticator(_username, user_cache)
+            _username_hash = self._authenticator.custom_hash(_username)
+            _password_hash = self._authenticator.custom_hash(_initial_password)
+            print(f"DEBUG: str, hashed str: {_username}, {_username_hash}")
 
-            _admin = user.User(_lastname, _name, _username, _initial_password, _admin_otp)
-           
+
+            _admin = user.User(_lastname, _name, _username_hash.hex(), _password_hash.hex(), _admin_otp)
+
+            self._user_cache.add_user_to_cache(_admin)           
+
         # on subsequent logins
 
 
@@ -90,8 +96,8 @@ class LoginMenu:
                 print(f"saved username_hash: {_user.username_hash} == {hash(_username)}\nsaved password_hash: {_user.password_hash} == {hash(_password)}\nresult: {_user.username_hash == hash(_username) and _user.password_hash == hash(_password)}")
                 if _user.username_hash == hash(_username) and _user.password_hash == hash(_password):
                     self._logged_in = True
-                    return authentication.AuthenticatedUser(hash(_username), hash(_password))        
-    
+                    return authentication.AuthenticatedUser(hash(_username), hash(_password))
+
 
 if __name__ == "__main__":
     user_cache = user_management.UserCache()

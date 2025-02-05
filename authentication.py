@@ -1,5 +1,5 @@
 from pathlib import Path
-from hashlib import blake2b 
+import scrypt
 import getpass
 from os import urandom
 from os import mkdir
@@ -7,20 +7,24 @@ from os import mkdir
 import user_management
 
 
-KEY = b'Thisisanexamplekey'
 
 
 class AuthenticatedUser:
     def __init__(self, username_hash: str, password_hash):
         _super_hash = hash(username_hash * password_hash)
         
+
+
 class Authenticator:
+    _username = None
     _salt = None
+    _N = 8
+    _p = 3234
+    _r = 6273
     _id_counter = 0
 
     def __init__(self, username: str, user_cache: user_management.UserCache):
         self._username = username
-        self._key = KEY
         _path = Path("./.secrets/hashing.csv")
         _path_exists = _path.exists()
 
@@ -37,17 +41,11 @@ class Authenticator:
             print(_salt)
 
             if not _directory_path_exists:
-                mkdir(_directory_path)
+               mkdir(_directory_path)
 
             with open(_path, "x") as file:
                 file.write("setting_no;name;value\n")
                 file.write(f"{self._id_counter};salt;{_salt.hex()}\n")
-                self._id_counter += 1
-                file.write(f"{self._id_counter};key;{self._key.hex()}\n")
-            
-            _sec_hash_provider = blake2b(key=self._key, salt=self._salt, person=bytes(self._username))
-            self._sec_hash_provider = _sec_hash_provider
-               
             
 
         elif self._salt == None and _path_exists:
@@ -60,17 +58,24 @@ class Authenticator:
                     _str = _prep_line.split(";")
                     if _str.__contains__("salt"):
                         print("Now processing salt", self._salt)
-                        self._salt = bytes.fromhex(_str[1])
-                        _sec_hash_provider = blake2b(salt=self._salt)
-                        self._sec_hash_provider = _sec_hash_provider
-                    elif _str.__cotains__("key"):
-                        print("Now processing key")
-                        pass
+                        self._salt = bytes.fromhex(_str[2])
+
 
         else:
             print("        Authenticator init, already initialized")
             pass
+        
+        # DEBUG output
+        print(f"DEBUG: _id_counter: {self._id_counter}")
+        print(f"DEBUG: _salt: {self._salt}")
+        print(f"DEBUG: _username: {self._username}")
 
+
+    def custom_hash(self, value: str):
+        assert type(value) is str
+        _hashed_value =  scrypt.hash(password=value, salt=self._salt + str.encode(self._username), N=self._N, r=self._r, p=self._p)
+        print(f"DEBUG: _hashed_value for {value} is {_hashed_value}")
+        return _hashed_value
 
     def set_username(self, user_id: int = 0):
         _username = getpass.getpass("        Benutzernamen vergeben (Achtung! Doppelte Eingabe notwendig): ")

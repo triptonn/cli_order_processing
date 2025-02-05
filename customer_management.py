@@ -80,7 +80,7 @@ class CustomerCache:
             assert type(_customer) == customer.Customer
         _customer_tuple = tuple(self._customer_cache)
 
-        _customer_list = sorted(_customer_tuple, key=lambda customer: customer._customer_id) 
+        _customer_list = sorted(_customer_tuple, key=lambda customer: customer.customer_id) 
         for _customer in _customer_list:
             assert type(_customer) is customer.Customer
             print(_customer.output_print())
