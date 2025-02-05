@@ -22,6 +22,7 @@ class MainMenu:
 
         menu_text = """
         ##########################################################################################################
+        
         Herzlich Wilkommen
         
         Menü:                                                                          'c' um Bildschirm zu räumen
@@ -73,9 +74,11 @@ class LoginMenu:
 
             info_text = """
         ##########################################################################################################
+        
         Herzlich Wilkommen
         
-        Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...                                                                                                      
+        Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...
+                                                                                                              
         ##########################################################################################################
             """
 
@@ -98,7 +101,9 @@ class LoginMenu:
             
             
             self._logged_in = True
-            _authenticated_user = self.login()
+            _authenticated_user = self.get_authenticated_user()
+            
+            printer.Printer.clear_cli()
 
             menu = MainMenu(_authenticated_user)
             menu.main_menu_loop(user_cache)
@@ -134,7 +139,7 @@ class LoginMenu:
                         if self._logged_in == True:
                             self._password_hash = _password_hash
 
-    def login(self):
+    def get_authenticated_user(self):
         if self._logged_in == True:
             return authentication.AuthenticatedUser(self._user, self._username_hash, self._password_hash, self._authenticator)
 
@@ -143,7 +148,7 @@ if __name__ == "__main__":
     user_cache = user_management.UserCache()
     
     login_menu = LoginMenu(user_cache)
-    _authenticated_user = login_menu.login() 
+    _authenticated_user = login_menu.get_authenticated_user() 
 
     menu = MainMenu(_authenticated_user)
     printer.Printer.clear_cli()

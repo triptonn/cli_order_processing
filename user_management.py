@@ -111,6 +111,7 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
 
     _menu_string = """
         ##########################################################################################################
+        
         Benutzerverwaltung
         
         Menü:                                                                          'c' um Bildschirm zu räumen

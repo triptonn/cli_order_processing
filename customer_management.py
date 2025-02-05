@@ -121,6 +121,7 @@ def customer_management_loop(customer_cache: CustomerCache):
 
     _menu_string = """
         #########################################################################################################
+        
         Kundendatenbank
         
         Menü:                                                                          'c' um Bildschirm zu räumen
