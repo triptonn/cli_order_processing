@@ -1,7 +1,7 @@
 from pathlib import Path
 import copy
-import getpass
 
+import authenticator
 import user
 
 
@@ -103,40 +103,6 @@ class UserIDException(UserDBException):
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
-def set_username(user_id: int = 0):
-    _user_name = getpass.getpass("        Benutzernamen vergeben (Achtung! Doppelte Eingabe notwendig): ")
-    _user_name_set = False
-    _user_name_equal = False
-    while not _user_name_set:
-        while not _user_name_equal:
-            _user_name_control = getpass.getpass("        Erneut eingeben: ")
-            if _user_name == _user_name_control:
-                _user_name_set = True
-                _user_name_equal = True      
-                return hash(_user_name)
-            elif _user_name_control == "abbruch":
-                break
-
-def set_password(user_id: int = 0):
-    if user_id == -1:
-        _password = getpass.getpass("        Erster Login :-) Wilkommen! Bitte ändere das 'admin' Passwort!\n        (Auchtung, das Passwort muss gleich noch einmal eingegeben werden!) \n        Passwort: ")
-    else:
-        _password = getpass.getpass("        Passwortänderung! (Achtung! Doppelte Eingabe notwendig): ")
-
-    _password_set = False
-    _password_equal = False
-    while not _password_set:
-        while not _password_equal:
-            _password_control = getpass.getpass("        Erneut eingeben ('abbruch' um es neu zu versuchen): ")
-            if _password == _password_control:
-                _password_set = True
-                _password_equal = True
-                return hash(_password)
-            elif _password_control == "abbruch":
-                break
-            
-
-
 def user_management_menu_loop(user_cache: UserCache):
     _menu_string = """
         ##########################################################################################################
@@ -161,9 +127,11 @@ def user_management_menu_loop(user_cache: UserCache):
         if _menu_item == "1":
             _lastname = input("        Nachname: ")
             _name = input("        Vorname: ")
-
-            _user_name_hash = set_username() 
-            _password_hash = set_password()
+            
+            _authenticator = authenticator.Authenticator()
+            
+            _user_name_hash = _authenticator.set_username() 
+            _password_hash = _authenticator.set_password()
                     
             _user = user.User(_lastname, _name, _user_name_hash, _password_hash)
             _user.save_user_to_csv()

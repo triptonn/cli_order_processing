@@ -1,6 +1,7 @@
 from pathlib import Path
 from enum import Enum
 import os
+
 import customer
 
     
@@ -135,8 +136,12 @@ class OrderState(Enum):
 class Order:
     order_id_set = set()
     _order_id_counter = 0
-    total = 0.00
-    _state = None 
+    _total_before_discount = 0.00
+    total = 0
+    _state = None
+    
+    default_quantity_discount_qualifier = 100.00
+    default_quantity_discount = 0.1
     
     def __init__(self, customer: customer.Customer, positions: Positions, order_id: int = 0, state: OrderState = OrderState.OPENED):
         self._state = state
@@ -161,10 +166,14 @@ class Order:
 
         for position in self._positions._position_list:
             assert type(position) == Position            
-            self.total += position.position_total
+            self._total_before_discount += position.position_total
             
-        self.total = round(self.total, 2) 
-
+        self._total_before_discount = round(self._total_before_discount, 2)
+        
+        if self._total_before_discount >= self.default_quantity_discount_qualifier:
+            self.total = self._total_before_discount * self.default_quantity_discount
+        else:
+            self.total = self._total_before_discount
         
     def save_order_to_csv(self):
         _orders_csv = Path("./Datenbanken/orders.csv")
@@ -192,10 +201,10 @@ class Order:
         assert type(self._state) is OrderState
         assert type(self._positions) is Positions
 
-        self.total = 0.00
+        self._total_before_discount = 0.00
         for position in self._positions._position_list:
             assert type(position) is Position
-            self.total += position.position_total
+            self._total_before_discount += position.position_total
 
         _orders_csv = Path("./Datenbanken/orders.csv")
         _temp_orders_csv = Path("./Datenbanken/orders_temp.csv")
@@ -227,8 +236,8 @@ class Order:
     
     
     def __repr__(self):
-        return repr((self.order_id, self._customer, self._state, self._positions, self.total))
+        return repr((self.order_id, self._customer, self._state, self._positions, self._total_before_discount))
 
     def __str__(self):
-        return f"Nummer: {self.order_id}, Kunde: {self._customer}, Status: {self._state.value}, Positionen: {self._positions}, Total: {self.total}"
+        return f"Nummer: {self.order_id}, Kunde: {self._customer}, Status: {self._state.value}, Positionen: {self._positions}, Total: {self._total_before_discount}"
     
