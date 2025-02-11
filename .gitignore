@@ -1,0 +1,6 @@
+/.venv
+/.VSCodeCounter
+/.planung
+/__pycache__
+/.devcontainer
+/.secrets

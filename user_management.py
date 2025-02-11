@@ -2,7 +2,7 @@ from pathlib import Path
 import copy
 
 import authentication
-import user
+import user_repository
 import printer
 
 
@@ -23,8 +23,8 @@ class UserCache:
                         
                     for _listed_user in _prep_user_list:
                         _prep_user = str.split(_listed_user, sep=";")
-                        _user_id_exists = user.User._user_id_set.__contains__(int(_prep_user[0]))
-                        _user = user.User(_prep_user[1],_prep_user[2],bytes.fromhex(_prep_user[3]),bytes.fromhex(_prep_user[4]),int(_prep_user[0]))
+                        _user_id_exists = user_repository.User._user_id_set.__contains__(int(_prep_user[0]))
+                        _user = user_repository.User(_prep_user[1],_prep_user[2],bytes.fromhex(_prep_user[3]),bytes.fromhex(_prep_user[4]),int(_prep_user[0]))
                         if not _user_id_exists:
                             self.user_cache.add(_user)
                         else:
@@ -37,7 +37,7 @@ class UserCache:
         _search_str = copy.copy(search_str)
         _possible_hits = []
         for u in self.user_cache:
-            assert type(u) is user.User
+            assert type(u) is user_repository.User
 
             if u._firstname.find(_search_str) >= 0:
                 _possible_hits.append[u]
@@ -46,13 +46,13 @@ class UserCache:
                 _possible_hits.append[u]
                 
         for h in _possible_hits:
-            assert type(h) is user.User
+            assert type(h) is user_repository.User
             print(h)
                 
     def get_user(self, user_id: int):
         try:
             for _user in self.user_cache:
-                assert type(_user) is user.User
+                assert type(_user) is user_repository.User
                 if user_id == _user._user_id:
                     return copy.copy(_user)
             else: raise UserNotFoundException(f"User {user_id} not found in cache!")
@@ -63,24 +63,24 @@ class UserCache:
 
     def print_user_db(self):
         for _user in self.user_cache:
-            assert type(_user) is user.User
+            assert type(_user) is user_repository.User
         _user_tuple = tuple(self.user_cache)
         
         _user_list = sorted(_user_tuple, key=lambda user: user._user_id)
 
         print("")
         for _user in _user_list:
-            assert type(_user) is user.User
+            assert type(_user) is user_repository.User
             print("       ", _user.output_print())
     
-    def add_user_to_cache(self, user: user.User):
+    def add_user_to_cache(self, user: user_repository.User):
         self.user_cache.add(user)
     
-    def update_cached_user(self, old: user.User, new: user.User):
+    def update_cached_user(self, old: user_repository.User, new: user_repository.User):
         self.user_cache.remove(old)
         self.user_cache.add(new)
     
-    def remove_cached_user(self, user: user.User):
+    def remove_cached_user(self, user: user_repository.User):
         self.user_cache.remove(user)
 
     def __iter__(self):
@@ -142,7 +142,7 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
             _username_hash = _authenticator.custom_hash(_username)
             _password_hash = _authenticator.custom_hash(_password)
 
-            _user = user.User(_lastname, _name, _username_hash.hex(), _password_hash.hex())
+            _user = user_repository.User(_lastname, _name, _username_hash.hex(), _password_hash.hex())
 
             _user.save_user_to_csv()
             user_cache.add_user_to_cache(_user)
