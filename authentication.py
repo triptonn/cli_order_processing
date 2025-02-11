@@ -118,4 +118,4 @@ class AuthenticatedUser:
 
         self._super_hash = scrypt.hash(self._random_key + password_hash, self._salt, N=self._N, p=self._p, r=self._r, buflen=32)
 
-    # this object will carry the user rights granted to the user when the user is authenticated
+    # TODO: this object will carry the user rights granted to the user when the user is authenticated

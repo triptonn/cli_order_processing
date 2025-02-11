@@ -264,6 +264,7 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
 
     _menu_string = """
         ##########################################################################################################
+        
         Auftragsbearbeitung
 
         Menü:                                                                          'c' um Bildschirm zu räumen
@@ -349,6 +350,7 @@ def item_management_menu_loop(item_cache: ItemCache):
 
     _menu_string = """
         ##########################################################################################################
+        
         Warenverwaltung
 
         Menü:                                                                          'c' um Bildschirm zu räumen
