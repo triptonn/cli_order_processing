@@ -1,5 +1,6 @@
+'''Caches and menus of the order processing module'''
+
 from pathlib import Path
-from typing import List
 import copy
 
 from order_repository import Item, Position, Order, OrderState
@@ -8,7 +9,15 @@ import printer
 
 
 class ItemCache:
-    '''Class for caching items'''
+    """Cache to hold the loaded items
+
+    Raises:
+        ItemNumberException: _description_
+        ItemNotFoundException: _description_
+
+    Returns:
+        _type_: _description_
+    """
 
     _item_cache = set()
 
@@ -66,8 +75,6 @@ class ItemCache:
 
         except ItemNotFoundException:
             print(f"Caught ItemNotFoundException: Item {item_number} not found")
-        except Exception as err:
-            print(f"Unexpected Error while getting item: {err}")
 
         return None
 
@@ -121,12 +128,15 @@ class OrderCache:
                     lines = _orderdb.readlines()
                     lines.pop(0)
                     for line in lines:
+                        print(f"for line in lines: {line}")
                         _prep_order_str_list.append(line.strip("\n"))
 
                     for _listed_order in _prep_order_str_list:
+                        print(f"for _listed_order in _prep_order_str_list: {_listed_order}")
                         _order_positions = []
                         _order_position_values = []
                         _prep_order = str.split(_listed_order, sep=";")
+                        print(f"_prep_order: {_prep_order}")
                         _order_id_exists = Order.order_id_set.__contains__(int(_prep_order[0]))
 
                         _order_state = None
@@ -146,30 +156,19 @@ class OrderCache:
                             case _:
                                 pass
 
-                        _prep_positions = str.split(_prep_order[3], sep="},{")
-                        _prep_positions_index_zero_correct = str.split(_prep_positions[0], sep="[{")
-                        _index_zero_correction = _prep_positions_index_zero_correct[1] # first position
-                        _first_position_values = tuple(str.split(_index_zero_correction, sep=","))
-
-                        _order_position_values.append(_first_position_values)
-
-                        _middle_indices = _prep_positions[1:len(_prep_positions) - 1]
-
-                        for pos in _middle_indices:
-                            _pos = tuple(str.split(str.strip(pos, "'"), sep=","))
-                            _order_position_values.append(_pos)
-
-                        _prep_positions_last_index_correction = str.split(_prep_positions[len(_prep_positions) - 1], sep="}")
-                        _last_index_correction = str.strip(_prep_positions_last_index_correction[0], "'")
-                        _last_position_values = tuple(str.split(_last_index_correction, sep=","))
-
-                        _order_position_values.append(_last_position_values)
-
                         for pos in _order_position_values:
-                            _position = Position(item_cache.get_item(int(pos[0])), int(pos[1]))
+                            _position = Position(
+                                item_cache.get_item(int(pos[3])),
+                                int(pos[4]),
+                                int(pos[1]))
+
                             _order_positions.append(_position)
 
-                        _order = Order(customer_cache.get_customer(int(_prep_order[1])), _order_positions,_prep_order[0],_order_state)
+                        _order = Order(customer_cache.get_customer(
+                            int(_prep_order[1])),
+                                _order_positions,
+                                _prep_order[0],
+                                _order_state)
 
                         if not _order_id_exists:
                             self._order_cache.add(_order)
@@ -179,10 +178,11 @@ class OrderCache:
             except OrderIDException as exc:
                 print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
             except AssertionError as err:
-                print(f"Caught AssertionError during order cache initialization: {err, err.with_traceback()}")
-            except Exception as exc:
-                print(f"Unknown Exception caught during order cache initialization: {exc}")
-
+                print("Caught AssertionError during order cache "
+                      f"initialization: {err, err.__traceback__.tb_lineno}")
+            except IndexError as err:
+                print("Caught IndexError during order cache "
+                      f"initialization: {err,err.__traceback__.tb_lineno}")
 
     def find_order(self, customer: str = ""):
         '''Method to find a order by the customer name'''
@@ -221,7 +221,7 @@ class OrderCache:
         '''Method used to print the content of the order cache to the console'''
         _order_tuple = tuple[Order](self._order_cache)
         _order_list = sorted(_order_tuple, key=lambda o: o.order_id)
-        
+
         print("")
         for _order in _order_list:
             print("        ",_order,sep="")
@@ -259,7 +259,11 @@ class OrderIDException(OrderDBException):
         self.custom_kwarg = kwargs.get('custom_kwarg')
 
 
-def order_processing_menu_loop(customer_cache: customer_management.CustomerCache, order_cache: OrderCache, item_cache: ItemCache):
+def order_processing_menu_loop(
+    customer_cache: customer_management.CustomerCache,
+    order_cache: OrderCache,
+    item_cache: ItemCache):
+
     '''Function running the menu loop of the order processing feature'''
 
     _menu_string = """
@@ -306,24 +310,30 @@ def order_processing_menu_loop(customer_cache: customer_management.CustomerCache
 
 
         elif _menu_item == "2":
-            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu bearbeitenden Auftrags ein:")
+            _local_item_number = input("        Bitte geben sie die "
+                                       "Auftragsnummer des zu bearbeitenden Auftrags ein:")
 
             _unmodified_order = order_cache.get_order(int(_local_item_number))
-            
+
             if _unmodified_order is None:
                 pass
             else:
                 _new_positions = get_order_positions(item_cache)
                 if _new_positions is None:
-                    print("        Fehler: Positionen konnten nicht erzeugt werden")                
+                    print("        Fehler: Positionen konnten nicht erzeugt werden")
                 else:
-                    _new_order = Order(customer=_unmodified_order._customer, positions=_new_positions, order_id=_unmodified_order.order_id, state=_unmodified_order._state)
+                    _new_order = Order(
+                        customer=_unmodified_order.customer,
+                        positions=_new_positions,
+                        order_id=_unmodified_order.order_id,
+                        state=_unmodified_order.state)
                     order_cache.update_cached_order(_unmodified_order, _new_order)
                     _unmodified_order.delete_order_in_csv()
                     _new_order.save_order_to_csv()
 
         elif _menu_item == "3":
-            _local_item_number = input("        Bitte geben sie die Auftragsnummer des zu löschenden Auftrags ein:")
+            _local_item_number = input("        Bitte geben sie die Auftragsnummer"
+                                       " des zu löschenden Auftrags ein:")
             _order_to_delete = order_cache.get_order(int(_local_item_number))
             if _order_to_delete is None:
                 pass
@@ -384,7 +394,8 @@ def item_management_menu_loop(item_cache: ItemCache):
             print("        Artikel wurde aktualisiert!")
 
         elif _menu_item == "3":
-            _item_number = input("        Bitte geben sie die Artikelnummer des zu löschenden Artikels ein: ")
+            _item_number = input("        Bitte geben sie die Artikelnummer des zu "
+                                 "löschenden Artikels ein: ")
             _item = item_cache.get_item(int(_item_number))
             _item.delete_item_form_csv()
             item_cache.remove_item_from_cache(_item)
@@ -410,7 +421,10 @@ def get_order_positions(item_cache: ItemCache):
         _count = None
         _position_valid = True
 
-        _item_name_or_number_str = input("        Itemname oder -nummer ('fertig' um die Eingabe von Positionen zu beenden): ")
+        _item_name_or_number_str = input("        Itemname oder -nummer"
+                                         " ('fertig' um die Eingabe von"
+                                         " Positionen zu beenden): ")
+
         if _item_name_or_number_str == "fertig":
             print("        Keine weiteren Items.")
             break
@@ -419,7 +433,6 @@ def get_order_positions(item_cache: ItemCache):
         try:
             _count = int(_count_str)
         except ValueError as exc:
-            exc.add_note("        Die eingegebene Stückzahl ist ungültig!")
             print(exc)
             continue
 
@@ -439,8 +452,12 @@ def get_order_positions(item_cache: ItemCache):
             item = item_cache.get_item(item_number)
 
         if item is not None:
-            print(f"{_position_value[0], type(_position_value[0]), _position_value[1], type(_position_value[1])}")
-            position = Position(item_cache.get_item(int(_position_value[0])), _position_value[1])
+            position = Position(item_cache.get_item(
+                int(_position_value[3])),
+                    _position_value[4],
+                    _position_value[1])
+
+            position.save_position_to_csv()
             _positions.append(position)
         else:
             print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")

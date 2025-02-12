@@ -114,7 +114,7 @@ class AuthenticatedUser:
     def __init__(self, user: user_repository.User, username_hash: bytes, password_hash: bytes, authenticator: Authenticator):
         self._user = user
         self._user_key = username_hash[32:]
-        self._authenticator = authenticator
+        self.authenticator = authenticator
 
         self._super_hash = scrypt.hash(self._random_key + password_hash, self._salt, N=self._N, p=self._p, r=self._r, buflen=32)
 

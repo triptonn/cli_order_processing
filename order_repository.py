@@ -1,3 +1,5 @@
+""" Data classes necessary for order processing module"""
+
 from pathlib import Path
 from typing import List
 from enum import Enum
@@ -63,13 +65,16 @@ class Item:
         _temp_items_csv = Path("./Datenbanken/temp_items.csv")
         _exists = _items_csv.exists()
         if _exists:
-            with open(_items_csv, "r", encoding="UTF-8") as input_file, open(_temp_items_csv, "w", encoding="UTF-8") as output_file:
-                lines = input_file.readlines()
-                for line in lines:
-                    if line.strip("\n") != f"{self.item_number};{self.item_name};{self.unit_price}\n":
-                        output_file.write(line)
-                    else:
-                        output_file.write(f"{self.item_number};{self.item_name};{self.unit_price}\n")
+            with open(_items_csv, "r", encoding="UTF-8") as input_file:
+                with open(_temp_items_csv, "w", encoding="UTF-8") as output_file:
+                    lines = input_file.readlines()
+                    for line in lines:
+                        if line.strip("\n") != (f"{self.item_number};"
+                                                f"{self.item_name};{self.unit_price}\n"):
+                            output_file.write(line)
+                        else:
+                            output_file.write(f"{self.item_number}"
+                                              f";{self.item_name};{self.unit_price}\n")
 
             os.remove("./Datenbanken/items.csv")
             _temp_items_csv.rename("./Datenbanken/items.csv")
@@ -81,11 +86,13 @@ class Item:
         _temp_items_csv = Path("./Datenbanken/items_temp.csv")
         _exists = _items_csv.exists()
         if _exists:
-            with open(_items_csv, "r", encoding="UTF-8") as input_csv_file, open(_temp_items_csv, "w", encoding="UTF-8") as output_csv_file:
-                lines = input_csv_file.readlines()
-                for line in lines:
-                    if line.strip("\n") != f"{self.item_number};{self.item_name};{self.unit_price}":
-                        output_csv_file.write(line)
+            with open(_items_csv, "r", encoding="UTF-8") as input_csv_file:
+                with open(_temp_items_csv, "w", encoding="UTF-8") as output_csv_file:
+                    lines = input_csv_file.readlines()
+                    for line in lines:
+                        if line.strip("\n") != (f"{self.item_number}"
+                                                f";{self.item_name};{self.unit_price}"):
+                            output_csv_file.write(line)
             os.remove("./Datenbanken/items.csv")
             _temp_items_csv.rename("./Datenbanken/items.csv")
 
@@ -104,9 +111,10 @@ class Position:
     position_id_counter = 0
     line_total = 0
 
-    def __init__(self, item: Item, count: int):
+    def __init__(self, item: Item, count: int, order_id: int):
         self.position_id_counter += 1
         self.position_id = self.position_id_counter
+        self._order_id = order_id
 
         self.item = item
         self.count = count
@@ -120,7 +128,8 @@ class Position:
 
         if _exists:
             with open(_positions_csv, "a", encoding="UTF-8") as file:
-                file.write(f"{self.position_id};{self.position_number};{self.item.item_number};{self.count}\n")
+                file.write(f"{self.position_id};{self._order_id};{self.position_number}"
+                           f";{self.item.item_number};{self.count}\n")
 
         else:
             _db_directory = Path("./Datenbanken/")
@@ -129,11 +138,12 @@ class Position:
                 os.mkdir("./Datenbanken/")
 
             with open(_positions_csv, "w", encoding="UFT-8") as file:
-                file.write("position_id;position_number;item_number;count\n")
-                file.write(f"{self.position_id};{self.position_number};{self.item.item_number};{self.count}\n")
+                file.write("position_id;order_id;position_number;item_number;count\n")
+                file.write(f"{self.position_id};{self._order_id};{self.position_number}"
+                           f";{self.item.item_number};{self.count}\n")
 
     def __copy__(self):
-        return Position(self.item, self.count)
+        return Position(self.item, self.count, self._order_id)
 
     def __repr__(self):
         return repr((self.item.item_number, self.count))
@@ -160,7 +170,7 @@ class Order:
     _order_id_counter = 0
     _total_before_discount = 0.00
     total = 0
-    _state = None
+    state = None
 
     default_quantity_discount_qualifier = 100.00
     default_quantity_discount = 0.1
@@ -172,7 +182,7 @@ class Order:
         order_id: int = 0,
         state: OrderState = OrderState.OPENED):
 
-        self._state = state
+        self.state = state
 
         if order_id == 0:
             Order._order_id_counter += 1
@@ -211,15 +221,15 @@ class Order:
 
         if _exists:
             with open(_orders_csv, "a", encoding="UTF-8") as file:
-                file.write(f"{self.order_id};{self.customer};{self._state.value};{self._positions}\n")
+                file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
         else:
             _directory = Path("./Datenbanken/")
             _directory_exists = _directory.exists()
             if not _directory_exists:
                 os.mkdir("./Datenbanken/")
             with open(_orders_csv, "w", encoding="UTF-8") as file:
-                file.write("Auftragsnummer;Kunde;Status;Positionen\n")
-                file.write(f"{self.order_id};{self.customer};{self._state.value};{self._positions}\n")
+                file.write("order_id;customer;state\n")
+                file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
 
     def update_order_in_csv(self, state: OrderState = None, positions: List[Position] = None):
         '''Method used to update order information in the csv file'''
@@ -227,12 +237,12 @@ class Order:
         _positions = positions
 
         if state is not None:
-            self._state = state 
+            self.state = state
 
         if _positions is not None:
             self._positions = _positions
 
-        assert isinstance(self._state, OrderState)
+        assert isinstance(self.state, OrderState)
         assert isinstance(self._positions, List[Position])
 
         self._total_before_discount = 0.00
@@ -244,13 +254,16 @@ class Order:
         _temp_orders_csv = Path("./Datenbanken/orders_temp.csv")
         _exists = _orders_csv.exists()
         if _exists:
-            with open(_orders_csv, "r", encoding="UTF-8") as input_file, open(_temp_orders_csv, "w", encoding="UTF-8") as output_file:
-                lines = input_file.readlines()
-                for line in lines:
-                    if line.strip("\n") != f"{self.order_id};{self.customer};{self._state.value};{self._positions}\n":
-                        output_file.write(line)
-                    else:
-                        output_file.write(f"{self.order_id};{self.customer};{self._state.value};{_positions}\n")
+            with open(_orders_csv, "r", encoding="UTF-8") as input_file:
+                with open(_temp_orders_csv, "w", encoding="UTF-8") as output_file:
+                    lines = input_file.readlines()
+                    for line in lines:
+                        if line.strip("\n") != (f"{self.order_id}"
+                                                f";{self.customer};{self.state.value}\n"):
+                            output_file.write(line)
+                        else:
+                            output_file.write(f"{self.order_id}"
+                                              f";{self.customer};{self.state.value}\n")
 
             os.remove("./Datenbanken/oders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
@@ -262,11 +275,13 @@ class Order:
         _temp_orders_csv = Path("./Datenbanken/orders_temp.csv")
         _exists = _orders_csv.exists()
         if _exists:
-            with open(_orders_csv, "r", encoding="UTF-8") as input_csv_file, open(_temp_orders_csv, "w", encoding="UTF-8") as output_csv_file:
-                lines = input_csv_file.readlines()
-                for line in lines:
-                    if line.strip("\n") != f"{self.order_id};{self.customer};{self._state.value};{self._positions}":
-                        output_csv_file.write(line)
+            with open(_orders_csv, "r", encoding="UTF-8") as input_csv_file:
+                with open(_temp_orders_csv, "w", encoding="UTF-8") as output_csv_file:
+                    lines = input_csv_file.readlines()
+                    for line in lines:
+                        if line.strip("\n") != (f"{self.order_id}"
+                                                f";{self.customer};{self.state.value}"):
+                            output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
 
@@ -274,9 +289,11 @@ class Order:
         return repr((
             self.order_id,
             self.customer,
-            self._state,
+            self.state,
             self._positions,
             self._total_before_discount))
 
     def __str__(self):
-        return f"Nummer: {self.order_id}, Kunde: {self.customer}, Status: {self._state.value}, Positionen: {self._positions}, Total: {self._total_before_discount}"
+        return (f"Nummer: {self.order_id}, Kunde: {self.customer}, "
+                f"Status: {self.state.value}, Positionen: {self._positions},"
+                f" Total: {self._total_before_discount}")
