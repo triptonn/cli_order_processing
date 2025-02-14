@@ -1,11 +1,11 @@
 '''Caches and menus of the order processing module'''
 
-from pathlib import Path
 import copy
+from pathlib import Path
 
-from order_repository import Item, Position, Order, OrderState
 import customer_management
 import printer
+from order_repository import Item, Order, OrderState, Position
 
 
 class ItemCache:
@@ -58,6 +58,7 @@ class ItemCache:
             assert isinstance(item, Item)
             if item.item_name == item_name:
                 return item.item_number
+            return None
 
     def get_item(self, item_number: int):
         '''Method used to return the item object by its item number'''
