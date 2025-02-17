@@ -197,7 +197,7 @@ class OrderCache:
             except IndexError as err:
                 print(
                     "Caught IndexError during order cache "
-                    f"initialization: {err, err.__traceback__.tb_lineno}"
+                    f"initialization: {err,err.__traceback__.tb_lineno}"
                 )
 
     def find_order(self, customer: str = ""):
@@ -288,7 +288,7 @@ def order_processing_menu_loop(
 
     _menu_string = """
         ##########################################################################################################
-
+        
         Auftragsbearbeitung
 
         Menü:                                                                          'c' um Bildschirm zu räumen
@@ -298,14 +298,14 @@ def order_processing_menu_loop(
         4. Aufträge ausgeben
         5. Warenverwaltung
         6. Zurück zum Hauptmenü
-
+        
         ##########################################################################################################
     """
 
     _order_processing = True
     while _order_processing is True:
         print(_menu_string)
-        _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt:")
+        _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt: ")
 
         if _menu_item == "1":
             _customer_string = input("        Kundenname:")
@@ -314,12 +314,16 @@ def order_processing_menu_loop(
             if _customer is None:
                 continue
 
-            _positions = get_order_positions(item_cache)
+            _temp_order = Order(_customer, [])
+            _temp_order_id = _temp_order.order_id
+
+            _positions = get_order_positions(item_cache, _temp_order_id)
 
             if _positions is None:
                 print("        Fehler: Positionen konnten nicht erstellt werden")
             else:
                 if _customer:
+
                     _order = Order(_customer, _positions)
                     _order.save_order_to_csv()
                     order_cache.add_order_to_cache(_order)
@@ -339,6 +343,7 @@ def order_processing_menu_loop(
                 pass
             else:
                 _new_positions = get_order_positions(item_cache)
+
                 if _new_positions is None:
                     print("        Fehler: Positionen konnten nicht erzeugt werden")
                 else:
@@ -378,12 +383,72 @@ def order_processing_menu_loop(
             printer.Printer.clear_cli()
 
 
+def get_order_positions(item_cache: ItemCache, order_id: int):
+    """Function to build the positions object when creating an order"""
+    _order_id = order_id
+    _adding_positions = True
+    _position_value_str_int = []
+    _positions = []
+    while _adding_positions:
+        _count = None
+        _position_valid = True
+
+        _item_name_or_number_str = input(
+            "        Itemname oder -nummer"
+            " ('fertig' um die Eingabe von"
+            " Positionen zu beenden): "
+        )
+
+        if _item_name_or_number_str == "fertig":
+            print("        Keine weiteren Items.")
+            break
+
+        _count_str = input("        Stück: ")
+        try:
+            _count = int(_count_str)
+        except ValueError as exc:
+            print(exc)
+            continue
+
+        if _item_name_or_number_str != "" and _position_valid:
+            _position_value_str_int.append([_item_name_or_number_str, _count])
+        else:
+            print("        Position lässt sich aus den Angaben nicht erzeugen!")
+            continue
+
+    for _position_value in _position_value_str_int:
+        try:
+            item_number = int(_position_value[0])
+            item = item_cache.get_item(item_number)
+        except ValueError:
+            item_name = _position_value[0]
+            item_number = item_cache.find_item_number(item_name)
+            item = item_cache.get_item(item_number)
+
+        if item is not None:
+            position = Position(
+                item_cache.get_item(int(_position_value[0])),
+                _position_value[1],
+                _order_id,
+            )
+
+            position.save_position_to_csv()
+            _positions.append(position)
+        else:
+            print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")
+
+    if _positions:
+        return _positions
+
+    print("        Fehler: Keine gültigen Positionen eingegeben")
+
+
 def item_management_menu_loop(item_cache: ItemCache):
     """Function running the menu loop of the item management feature"""
 
     _menu_string = """
         ##########################################################################################################
-
+        
         Warenverwaltung
 
         Menü:                                                                          'c' um Bildschirm zu räumen
@@ -392,7 +457,7 @@ def item_management_menu_loop(item_cache: ItemCache):
         3. Ware löschen
         4. Warenliste ausgeben
         5. Zurück zur Auftragsbearbeitung
-
+        
         ##########################################################################################################
     """
 
@@ -441,63 +506,4 @@ def item_management_menu_loop(item_cache: ItemCache):
         elif _menu_item == "c":
             printer.Printer.clear_cli()
 
-
-def get_order_positions(item_cache: ItemCache):
-    """Function to build the positions object when creating an order"""
-
-    _adding_positions = True
-    _position_value_str_int = []
-    _positions = []
-    while _adding_positions:
-        _count = None
-        _position_valid = True
-
-        _item_name_or_number_str = input(
-            "        Itemname oder -nummer"
-            " ('fertig' um die Eingabe von"
-            " Positionen zu beenden): "
-        )
-
-        if _item_name_or_number_str == "fertig":
-            print("        Keine weiteren Items.")
-            break
-
-        _count_str = input("        Stück: ")
-        try:
-            _count = int(_count_str)
-        except ValueError as exc:
-            print(exc)
-            continue
-
-        if _item_name_or_number_str != "" and _position_valid:
-            _position_value_str_int.append([_item_name_or_number_str, _count])
-        else:
-            print("        Position lässt sich aus den Angaben nicht erzeugen!")
-            continue
-
-    for _position_value in _position_value_str_int:
-        try:
-            item_number = int(_position_value[0])
-            item = item_cache.get_item(item_number)
-        except ValueError:
-            item_name = _position_value[0]
-            item_number = item_cache.find_item_number(item_name)
-            item = item_cache.get_item(item_number)
-
-        if item is not None:
-            position = Position(
-                item_cache.get_item(int(_position_value[3])),
-                _position_value[4],
-                _position_value[1],
-            )
-
-            position.save_position_to_csv()
-            _positions.append(position)
-        else:
-            print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")
-
-    if _positions:
-        return _positions
-
-    print("        Fehler: Keine gültigen Positionen eingegeben")
     return None

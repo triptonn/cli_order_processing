@@ -246,7 +246,7 @@ class Order:
     def __init__(
         self,
         customer: customer_repository.Customer,
-        positions: List[Position],
+        positions: List,
         order_id: int = 0,
         state: OrderState = OrderState.OPENED,
     ):
