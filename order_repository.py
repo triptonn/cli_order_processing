@@ -253,7 +253,7 @@ class Position:
                     else:
                         output_file.write(
                             f"{self.position_id};{self._order_id};"
-                            f"{self.item};{self.count}"
+                            f"{self.item};{self.count}\n"
                         )
             os.remove("./Datenbanken/positions.csv")
             _temp_positions_csv.rename("./Datenbanken/positions.csv")
@@ -312,18 +312,19 @@ class OrderState(Enum):
 
 class Order:
     """
-    Class holding the information of a order
+    Class holding the information of an order
 
     Attributes
     ----------
-    customer : Customer
-        customer
-    positions : list
-        positions
     order_id : int
-        order id
+        order id (automatically assign when first generated,
+        in other cases read from file / db)
+    customer : Customer
+        Customer object
+    positions : list
+        list of Position objects
     state : OrderState
-        order state
+        OrderState object
     """
 
     order_id_set = set()

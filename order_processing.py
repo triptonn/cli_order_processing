@@ -57,7 +57,6 @@ class ItemCache:
                     f"custom_kwarg={exc.custom_kwarg}"
                 )
             except ValueError as exc:
-                # ignore~E501
                 print(f"Caugh ValueError while initializing item cache: {exc.args}")
 
     def find_item_number(self, item_name: str):
@@ -123,10 +122,77 @@ class ItemCache:
 class PositionCache:
     """Class caching positions"""
 
-    _position_cache = set()
+    position_cache = set()
 
     def __init__(self, item_cache: ItemCache):
-        pass
+        _path = Path("./Datenbanken/positions.csv")
+        _position_csv_exists = _path.exists()
+        if _position_csv_exists:
+            try:
+                lines = self._read_csv(_path)
+                _prep_position_str_list = self._remove_eol_from_str_list(lines)
+                _position_value_list = self._convert_str_to_position_values(
+                    _prep_position_str_list
+                )
+
+                print(f"_position_value_list: {_position_value_list}")
+
+                for position_value in _position_value_list:
+                    _item = item_cache.get_item(position_value[1])
+                    _count = position_value[2]
+                    _order_id = position_value[3]
+                    _position = Position(
+                        item=_item,
+                        count=_count,
+                        order_id=_order_id,
+                    )
+                    self.add_position_to_cache(_position)
+
+            except Exception:
+                pass
+
+    def _read_csv(self, path: Path):
+        _path = path
+        with open(_path, "r", encoding="UTF-8") as _positiondb:
+            lines = _positiondb.readlines()
+            lines.pop(0)
+            return lines
+
+    def _remove_eol_from_str_list(self, lines: list[str]):
+        _eol_removed_str_list = []
+        for line in lines:
+            _eol_removed_str_list.append(line.stript("\n"))
+        return _eol_removed_str_list
+
+    # TODO: This method belongs to the Position class --> Create add_to_cache()
+    def save_position_to_csv(self):
+        """Saves a position to a csv files"""
+
+    # TODO: This method belongs to the Position class --> Create update_in_cache()
+    def update_position_in_csv(
+        self,
+        position_id: int,
+        item: Item = None,
+        count: int = None,
+    ):
+        """Updates a position in a csv files"""
+
+    # TODO: This method belongs to the Position class --> Create remove_from_cache()
+    def delete_position_from_csv(
+        self,
+        positon_id: int,
+    ):
+        """Deletes a position from a csv file"""
+
+    def get_positions(self, order_id: int):
+        """Getter for the positions of a specified order"""
+        _positions = []
+        for pos in self.position_cache:
+            assert isinstance(pos, Position)
+            if pos.order_id is order_id:
+                _positions.append(pos)
+
+        return _positions
 
     def __str__(self):
         pass
@@ -149,35 +215,36 @@ class OrderCache:
             try:
                 lines = self._read_csv(_path)
                 _prep_order_str_list = self._remove_eol_from_str_list(lines)
-                _order_values = self._convert_str_to_order_values(_prep_order_str_list)
-
-                # TODO: Loop through list of order values, generate order positions and build Order object
-                print(f"_order_values: {_order_values}")
-                _order_position_values = position_cache
-
-                # TODO: Get order positions from position cache!
-                _order_positions = self._rebuild_order_positions(
-                    item_cache,
-                    position_cache,
-                    _order_position_values,
+                _order_value_list = self._convert_str_to_order_values(
+                    _prep_order_str_list
                 )
 
-                print(f"_order_positions: {_order_positions}")
+                # TODO: Loop through list of order values, generate order positions and build the list of order positions
+                print(f"_order_values: {_order_value_list}")
 
-                _order = Order(
-                    customer_cache.get_customer(int(_prep_order[1])),
-                    _order_positions,
-                    _order_state,
-                )
+                for order_value in _order_value_list:
+                    _positions = position_cache.get_positions(order_value[0])
+                    _customer = customer_cache.get_customer(order_value[1])
+                    _order_state = self._str_state_to_order_state(order_value[2])
 
-                _order_id_exists = int(_prep_order[0]) in Order.order_id_set
-
-                if not _order_id_exists:
-                    self._order_cache.add(_order)
-                else:
-                    raise OrderIDException(
-                        str(_order), "Order ID ist bereits vergeben!"
+                    print(
+                        f"_positions: {_positions}, _customer: {_customer}, _order_state: {_order_state}"
                     )
+
+                    _order = Order(
+                        customer=_customer,
+                        positions=_positions,
+                        state=_order_state,
+                    )
+
+                    _order_id_exists = int(_order.order_id) in Order.order_id_set
+
+                    if not _order_id_exists:
+                        self._order_cache.add(_order)
+                    else:
+                        raise OrderIDException(
+                            str(_order), "Order ID ist bereits vergeben!"
+                        )
 
             except OrderIDException as exc:
                 print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
@@ -268,12 +335,13 @@ class OrderCache:
         _position_values = position_values
         _order_positions = []
         for pos in _position_values:
-            _position = Position(
-                item_cache.get_item(int(pos[1])),
-                int(pos[2]),
-                int(pos[0]),
-            )
-            _order_positions.append(_position)
+            if pos in position_cache.position_cache:
+                _position = Position(
+                    item_cache.get_item(int(pos[1])),
+                    int(pos[2]),
+                    int(pos[0]),
+                )
+                _order_positions.append(_position)
 
         return _order_positions
 
@@ -300,7 +368,10 @@ class OrderCache:
         self._order_cache.add(new)
 
     def print_order_db(self):
-        """Method used to print the content of the order cache to the console"""
+        """
+        Method used to print the content of the order cache to the console
+        """
+
         _order_tuple = tuple[Order](self._order_cache)
         _order_list = sorted(_order_tuple, key=lambda o: o.order_id)
 

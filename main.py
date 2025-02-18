@@ -33,21 +33,21 @@ class MainMenu:
             )
             self.order_cache = order_processing.OrderCache(
                 self.item_cache,
-                self.position_cache,
                 self.customer_cache,
+                self.position_cache,
             )
             self._initialized = True
 
         menu_text = """
         ##########################################################################################################
         Herzlich Wilkommen
-        
+
         Menü:                                                                          'c' um Bildschirm zu räumen
         1. Auftragsbearbeitung
         2. Kundendatenbank
         3. Benutzerverwaltung
         4. Programm beenden
-        
+
         ##########################################################################################################
         """
 
