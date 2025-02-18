@@ -35,11 +35,14 @@ class ItemCache:
 
                     for _listed_item in _prep_item_list:
                         _prep_item = str.split(_listed_item, sep=";")
+
                         _item_number_exists = Item.item_number_set.__contains__(
                             int(_prep_item[0])
                         )
                         _item = Item(
-                            _prep_item[1], float(_prep_item[2]), int(_prep_item[0])
+                            _prep_item[1],
+                            float(_prep_item[2]),
+                            int(_prep_item[0]),
                         )
                         if not _item_number_exists:
                             self._item_cache.add(_item)
@@ -50,9 +53,11 @@ class ItemCache:
 
             except ItemNumberException as exc:
                 print(
-                    f"Caught ItemNumberException with custom_kwarg={exc.custom_kwarg}"
+                    f"Caught ItemNumberException with "
+                    f"custom_kwarg={exc.custom_kwarg}"
                 )
             except ValueError as exc:
+                # ignore~E501
                 print(f"Caugh ValueError while initializing item cache: {exc.args}")
 
     def find_item_number(self, item_name: str):
@@ -79,10 +84,10 @@ class ItemCache:
                 if item.item_number == item_number:
                     return copy.copy(item)
 
-            raise ItemNotFoundException(f"Item with number {item_number} not found")
+            raise ItemNotFoundException("Item with number " f"{item_number} not found")
 
         except ItemNotFoundException:
-            print(f"Caught ItemNotFoundException: Item {item_number} not found")
+            print("Caught ItemNotFoundException: " f"Item {item_number} not found")
 
         return None
 
@@ -115,80 +120,68 @@ class ItemCache:
         return f"        {self._item_cache}"
 
 
+class PositionCache:
+    """Class caching positions"""
+
+    _position_cache = set()
+
+    def __init__(self, item_cache: ItemCache):
+        pass
+
+    def __str__(self):
+        pass
+
+
 class OrderCache:
     """Class caching orders"""
 
     _order_cache = set()
 
     def __init__(
-        self, item_cache: ItemCache, customer_cache: customer_management.CustomerCache
+        self,
+        item_cache: ItemCache,
+        customer_cache: customer_management.CustomerCache,
+        position_cache: PositionCache,
     ):
-        _prep_order_str_list = []
         _path = Path("./Datenbanken/orders.csv")
         _order_csv_exists = _path.exists()
         if _order_csv_exists:
             try:
-                with open(_path, "r", encoding="UTF-8") as _orderdb:
-                    lines = _orderdb.readlines()
-                    lines.pop(0)
-                    for line in lines:
-                        print(f"for line in lines: {line}")
-                        _prep_order_str_list.append(line.strip("\n"))
+                lines = self._read_csv(_path)
+                _prep_order_str_list = self._remove_eol_from_str_list(lines)
+                _order_values = self._convert_str_to_order_values(_prep_order_str_list)
 
-                    for _listed_order in _prep_order_str_list:
-                        print(
-                            f"for _listed_order in _prep_order_str_list: {_listed_order}"
-                        )
-                        _order_positions = []
-                        _order_position_values = []
-                        _prep_order = str.split(_listed_order, sep=";")
-                        print(f"_prep_order: {_prep_order}")
-                        _order_id_exists = Order.order_id_set.__contains__(
-                            int(_prep_order[0])
-                        )
+                # TODO: Loop through list of order values, generate order positions and build Order object
+                print(f"_order_values: {_order_values}")
+                _order_position_values = position_cache
 
-                        _order_state = None
-                        match _prep_order[2]:
-                            case "Offen":
-                                _order_state = OrderState.OPENED
-                            case "Pausiert":
-                                _order_state = OrderState.HALT
-                            case "InArbeit":
-                                _order_state = OrderState.WIP
-                            case "Versand":
-                                _order_state = OrderState.DONE
-                            case "Bezahlt":
-                                _order_state = OrderState.PAYED
-                            case "Geschlossen":
-                                _order_state = OrderState.CLOSED
-                            case _:
-                                pass
+                # TODO: Get order positions from position cache!
+                _order_positions = self._rebuild_order_positions(
+                    item_cache,
+                    position_cache,
+                    _order_position_values,
+                )
 
-                        for pos in _order_position_values:
-                            _position = Position(
-                                item_cache.get_item(int(pos[3])),
-                                int(pos[4]),
-                                int(pos[1]),
-                            )
+                print(f"_order_positions: {_order_positions}")
 
-                            _order_positions.append(_position)
+                _order = Order(
+                    customer_cache.get_customer(int(_prep_order[1])),
+                    _order_positions,
+                    _order_state,
+                )
 
-                        _order = Order(
-                            customer_cache.get_customer(int(_prep_order[1])),
-                            _order_positions,
-                            _prep_order[0],
-                            _order_state,
-                        )
+                _order_id_exists = int(_prep_order[0]) in Order.order_id_set
 
-                        if not _order_id_exists:
-                            self._order_cache.add(_order)
-                        else:
-                            raise OrderIDException(
-                                str(_order), "Order ID ist bereits vergeben!"
-                            )
+                if not _order_id_exists:
+                    self._order_cache.add(_order)
+                else:
+                    raise OrderIDException(
+                        str(_order), "Order ID ist bereits vergeben!"
+                    )
 
             except OrderIDException as exc:
                 print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
+
             except AssertionError as err:
                 print(
                     "Caught AssertionError during order cache "
@@ -197,7 +190,7 @@ class OrderCache:
             except IndexError as err:
                 print(
                     "Caught IndexError during order cache "
-                    f"initialization: {err,err.__traceback__.tb_lineno}"
+                    f"initialization: {err, err.__traceback__.tb_lineno}"
                 )
 
     def find_order(self, customer: str = ""):
@@ -211,6 +204,78 @@ class OrderCache:
             assert isinstance(_order, Order)
             if _order.customer == _customer:
                 print(_order)
+
+    def _read_csv(self, path: Path):
+        _path = path
+        with open(_path, "r", encoding="UTF-8") as _orderdb:
+            lines = _orderdb.readlines()
+            lines.pop(0)
+            return lines
+
+    def _remove_eol_from_str_list(self, lines: list[str]):
+        _eol_removed_str_list = []
+        for line in lines:
+            _eol_removed_str_list.append(line.strip("\n"))
+        return _eol_removed_str_list
+
+    def _convert_str_to_order_values(self, order_string_list: list[str]):
+        _order_values = []
+        for _listed_order in order_string_list:
+            _prep_order = str.split(_listed_order, sep=";")
+            _order_state = self._str_state_to_order_state(_prep_order[2])
+            _prep_order[2] = _order_state
+            if isinstance(_prep_order, list):
+                _order_values.append(_prep_order)
+            else:
+                raise StringToOrderConversionException
+
+        return _order_values
+
+    def _str_state_to_order_state(self, input_str: str):
+        _str_state = input_str
+        try:
+            match _str_state:
+                case "Offen":
+                    _order_state = OrderState.OPENED
+                case "Pausiert":
+                    _order_state = OrderState.HALT
+                case "InArbeit":
+                    _order_state = OrderState.WIP
+                case "Versand":
+                    _order_state = OrderState.DONE
+                case "Bezahlt":
+                    _order_state = OrderState.PAYED
+                case "Geschlossen":
+                    _order_state = OrderState.CLOSED
+                case _:
+                    raise OrderStateException
+
+            return _order_state
+
+        except OrderStateException as exc:
+            print(
+                "Caught an OrderStateException: Order state "
+                f"read from csv is invalid: {exc}"
+            )
+            return None
+
+    def _rebuild_order_positions(
+        self,
+        item_cache: ItemCache,
+        position_cache: PositionCache,
+        position_values: list,
+    ):
+        _position_values = position_values
+        _order_positions = []
+        for pos in _position_values:
+            _position = Position(
+                item_cache.get_item(int(pos[1])),
+                int(pos[2]),
+                int(pos[0]),
+            )
+            _order_positions.append(_position)
+
+        return _order_positions
 
     def get_order(self, order_id: int):
         """Method used to get the order object by its order id"""
@@ -279,6 +344,22 @@ class OrderIDException(OrderDBException):
         self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
+class OrderStateException(OrderDBException):
+    """Exception catching invalid order state"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
+class StringToOrderConversionException(OrderDBException):
+    """Exception catching exceptions while converting strings to Order objects"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
 def order_processing_menu_loop(
     customer_cache: customer_management.CustomerCache,
     order_cache: OrderCache,
@@ -288,7 +369,7 @@ def order_processing_menu_loop(
 
     _menu_string = """
         ##########################################################################################################
-        
+
         Auftragsbearbeitung
 
         Menü:                                                                          'c' um Bildschirm zu räumen
@@ -298,7 +379,7 @@ def order_processing_menu_loop(
         4. Aufträge ausgeben
         5. Warenverwaltung
         6. Zurück zum Hauptmenü
-        
+
         ##########################################################################################################
     """
 
@@ -448,7 +529,7 @@ def item_management_menu_loop(item_cache: ItemCache):
 
     _menu_string = """
         ##########################################################################################################
-        
+
         Warenverwaltung
 
         Menü:                                                                          'c' um Bildschirm zu räumen
@@ -457,7 +538,7 @@ def item_management_menu_loop(item_cache: ItemCache):
         3. Ware löschen
         4. Warenliste ausgeben
         5. Zurück zur Auftragsbearbeitung
-        
+
         ##########################################################################################################
     """
 
@@ -505,5 +586,3 @@ def item_management_menu_loop(item_cache: ItemCache):
 
         elif _menu_item == "c":
             printer.Printer.clear_cli()
-
-    return None

@@ -1,17 +1,21 @@
+"""Main module of the application"""
+
 import getpass
 
 import authentication
 import order_processing
-import customer_management 
+import customer_management
 import user_management
 import user_repository
 import printer
 
 
 class MainMenu:
-    '''Class containing the main menu loop'''
+    """Class containing the main menu loop"""
+
     customer_cache = None
     item_cache = None
+    position_cache = None
     order_cache = None
 
     def __init__(self, authenticated_user: authentication.AuthenticatedUser):
@@ -19,14 +23,20 @@ class MainMenu:
         self._authenticated_user = authenticated_user
 
     def main_menu_loop(self, _user_cache: user_management.UserCache):
-        '''Method implementing the main menu loop'''
+        """Method implementing the main menu loop"""
 
         if self._initialized is False:
             self.customer_cache = customer_management.CustomerCache()
             self.item_cache = order_processing.ItemCache()
-            self.order_cache = order_processing.OrderCache(self.item_cache, self.customer_cache)
+            self.position_cache = order_processing.PositionCache(
+                self.item_cache,
+            )
+            self.order_cache = order_processing.OrderCache(
+                self.item_cache,
+                self.position_cache,
+                self.customer_cache,
+            )
             self._initialized = True
-
 
         menu_text = """
         ##########################################################################################################
@@ -47,13 +57,17 @@ class MainMenu:
             _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt: ")
 
             if _menu_item == "1":
-                order_processing.order_processing_menu_loop(self.customer_cache, self.order_cache, self.item_cache)
+                order_processing.order_processing_menu_loop(
+                    self.customer_cache, self.order_cache, self.item_cache
+                )
 
             elif _menu_item == "2":
                 customer_management.customer_management_loop(self.customer_cache)
 
             elif _menu_item == "3":
-                user_management.user_management_menu_loop(_user_cache, self._authenticated_user)
+                user_management.user_management_menu_loop(
+                    _user_cache, self._authenticated_user
+                )
 
             elif _menu_item == "4":
                 print("        Das Programm wird beendet!")
@@ -64,7 +78,8 @@ class MainMenu:
 
 
 class LoginMenu:
-    '''Class facilitating the login process'''
+    """Class facilitating the login process"""
+
     _logged_in = False
     _authenticator = None
     _username_hash = None
@@ -99,7 +114,9 @@ class LoginMenu:
             _password_hash = self._authenticator.custom_hash(_password)
             self._password_hash = _password_hash
 
-            _admin = user_repository.User(_lastname, _name, _username_hash.hex(), _password_hash.hex(), _admin_otp)
+            _admin = user_repository.User(
+                _lastname, _name, _username_hash.hex(), _password_hash.hex(), _admin_otp
+            )
             _admin.save_user_to_csv()
             self._user_cache.add_user_to_cache(_admin)
             self._user = _admin
@@ -141,9 +158,14 @@ class LoginMenu:
                             self._password_hash = _password_hash
 
     def get_authenticated_user(self):
-        '''Method to get the authenticated user object'''
+        """Method to get the authenticated user object"""
         if self._logged_in is True:
-            return authentication.AuthenticatedUser(self._user, self._username_hash, self._password_hash, self._authenticator)
+            return authentication.AuthenticatedUser(
+                self._user,
+                self._username_hash,
+                self._password_hash,
+                self._authenticator,
+            )
         return None
 
 

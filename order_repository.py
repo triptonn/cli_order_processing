@@ -113,13 +113,41 @@ class Item:
 
 
 class Position:
-    """Class holding all order positions"""
+    """
+    Class holding all order positions
+
+    Attributes
+    ----------
+    item : Item
+        item object for this order position
+    count : int
+        item count as integer
+    order_id : int
+        unique order id of the order this position belongs to
+    """
 
     position_number = 0
     position_id_counter = 0
     line_total = 0
 
     def __init__(self, item: Item, count: int, order_id: int):
+        """
+        Constructs all neccessary attributes for the position object.
+
+        Parameters
+        ----------
+        item : Item
+            item of this position line
+        count : int
+            item count of this position line
+        order_id : int
+            uniqued identifier for the order this position belongs to
+
+        Returns
+        -------
+        None
+        """
+
         self.position_id_counter += 1
         self.position_id = self.position_id_counter
         self._order_id = order_id
@@ -129,7 +157,17 @@ class Position:
         self.line_total = item.unit_price * count
 
     def save_position_to_csv(self):
-        """Method saving position information to a csv"""
+        """
+        Saves position information as line to a csv.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
 
         _positions_csv = Path("./Datenbanken/positions.csv")
         _exists = _positions_csv.exists()
@@ -137,8 +175,11 @@ class Position:
         if _exists:
             with open(_positions_csv, "a", encoding="UTF-8") as file:
                 file.write(
-                    f"{self.position_id};{self._order_id};{self.position_number}"
-                    f";{self.item.item_number};{self.count}\n"
+                    f"{self.position_id};"
+                    f"{self._order_id};"
+                    f"{self.position_number};"
+                    f"{self.item.item_number};"
+                    f"{self.count}\n"
                 )
 
         else:
@@ -148,14 +189,42 @@ class Position:
                 os.mkdir("./Datenbanken/")
 
             with open(_positions_csv, "w", encoding="UFT-8") as file:
-                file.write("position_id;order_id;position_number;item_number;count\n")
                 file.write(
-                    f"{self.position_id};{self._order_id};{self.position_number}"
-                    f";{self.item.item_number};{self.count}\n"
+                    "position_id;"
+                    "order_id;"
+                    "position_number;"
+                    "item_number;"
+                    "count\n"
+                )
+                file.write(
+                    f"{self.position_id};"
+                    f"{self._order_id};"
+                    f"{self.position_number};"
+                    f"{self.item.item_number};"
+                    f"{self.count}\n"
                 )
 
     def update_position_in_csv(self, item: Item = None, count: int = None):
-        """Method to update the position information inside the csv file"""
+        """
+            Updates the
+        position information contained in the csv file.
+
+            Only the position attribute received by the function gets changed.
+
+            Parameters
+            ----------
+            item : Item, optional
+                Item object if position item needs to
+                be updated (default is None)
+
+            count : int, optional
+                New count if the item count needs to
+                be updated (default is None)
+
+            Returns
+            -------
+            None
+        """
 
         if item is not None:
             self.item = item
@@ -190,7 +259,17 @@ class Position:
             _temp_positions_csv.rename("./Datenbanken/positions.csv")
 
     def delete_position_in_csv(self):
-        """Method deleting position information from csv file"""
+        """
+        Deletes the line containing the position information from the csv file.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
 
         _positions_csv = Path("./Datenbanken/positions.csv")
         _temp_positions_csv = Path("./Datenbanken/positons_temp.csv")
@@ -232,7 +311,20 @@ class OrderState(Enum):
 
 
 class Order:
-    """Class holding the information of a order"""
+    """
+    Class holding the information of a order
+
+    Attributes
+    ----------
+    customer : Customer
+        customer
+    positions : list
+        positions
+    order_id : int
+        order id
+    state : OrderState
+        order state
+    """
 
     order_id_set = set()
     _order_id_counter = 0
@@ -262,9 +354,10 @@ class Order:
 
             if not Order.order_id_set.__contains__(_order_id):
                 Order.order_id_set.add(_order_id)
-
-                if Order._order_id_counter < _order_id:
-                    Order._order_id_counter = _order_id
+                Order._order_id_counter = max(
+                    Order._order_id_counter,
+                    _order_id,
+                )
 
             self.order_id = _order_id
 
@@ -296,12 +389,15 @@ class Order:
             _directory_exists = _directory.exists()
             if not _directory_exists:
                 os.mkdir("./Datenbanken/")
+
             with open(_orders_csv, "w", encoding="UTF-8") as file:
                 file.write("order_id;customer;state\n")
                 file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
 
     def update_order_in_csv(
-        self, state: OrderState = None, positions: List[Position] = None
+        self,
+        state: OrderState = None,
+        positions: List[Position] = None,
     ):
         """Method used to update order information in the csv file"""
 
@@ -330,13 +426,14 @@ class Order:
                     lines = input_file.readlines()
                     for line in lines:
                         if line.strip("\n") != (
-                            f"{self.order_id}" f";{self.customer};{self.state.value}\n"
+                            f"{self.order_id};{self.customer};{self.state.value}\n"
                         ):
                             output_file.write(line)
                         else:
                             output_file.write(
-                                f"{self.order_id}"
-                                f";{self.customer};{self.state.value}\n"
+                                f"{self.order_id};"
+                                f"{self.customer};"
+                                f"{self.state.value}\n"
                             )
 
             os.remove("./Datenbanken/oders.csv")
@@ -354,7 +451,7 @@ class Order:
                     lines = input_csv_file.readlines()
                     for line in lines:
                         if line.strip("\n") != (
-                            f"{self.order_id}" f";{self.customer};{self.state.value}"
+                            f"{self.order_id};{self.customer};{self.state.value}"
                         ):
                             output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
