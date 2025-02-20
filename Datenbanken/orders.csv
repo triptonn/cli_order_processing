@@ -1,4 +1,2 @@
-order_id;customer;state
-1;2;Offen
-2;2;Offen
-4;3;Offen
+order_id;customer_id;state
+2;3;Offen

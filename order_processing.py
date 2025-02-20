@@ -120,7 +120,14 @@ class ItemCache:
 
 
 class PositionCache:
-    """Class caching positions"""
+    """
+    Class for caching position objects
+
+    Attributes
+    ----------
+    position_cache :
+
+    """
 
     position_cache = set()
 
@@ -140,16 +147,88 @@ class PositionCache:
                 for position_value in _position_value_list:
                     _item = item_cache.get_item(position_value[1])
                     _count = position_value[2]
-                    _order_id = position_value[3]
+                    _order_id = position_value[0]
+                    _position_number = position_value[3]
                     _position = Position(
                         item=_item,
                         count=_count,
                         order_id=_order_id,
+                        position_number=_position_number,
                     )
                     self.add_position_to_cache(_position)
 
             except Exception:
                 pass
+
+    def get_positions(self, order_id: int):
+        """
+        Gets all positions of an order provided the order id
+
+        Paramaters
+        ----------
+        order_id : int
+            order id as integer
+
+        Returns
+        -------
+        list(Position) ordered by the position_number
+        """
+        _hits = []
+        for pos in self.position_cache:
+            assert isinstance(pos, Position)
+            if pos.order_id == order_id:
+                _hits.append(pos)
+        return _hits
+
+    def add_position_to_cache(self, position: Position):
+        """
+        Adds a position object to cache
+
+        Parameters
+        ----------
+        position : Position
+
+        Returns
+        -------
+        None
+
+        """
+
+        self.position_cache.add(position)
+
+    def update_position_in_cache(self, old_position: Position, new_position: Position):
+        """
+        Updates a position object in cache
+
+        Parameters
+        ----------
+        old_positon : Position
+
+        new_position  : Position
+
+        Returns
+        -------
+        None
+        """
+
+        self.position_cache.remove(old_position)
+        self.position_cache.add(new_position)
+
+    def remove_position_from_cache(self, position: Position):
+        """
+        Removes a position object from cache
+
+        Parameters
+        ----------
+        position : Position
+
+        Returns
+        -------
+        None
+
+        """
+
+        self.position_cache.remove(position)
 
     def _read_csv(self, path: Path):
         _path = path
@@ -164,42 +243,26 @@ class PositionCache:
             _eol_removed_str_list.append(line.stript("\n"))
         return _eol_removed_str_list
 
-    # TODO: This method belongs to the Position class --> Create add_to_cache()
-    def save_position_to_csv(self):
-        """Saves a position to a csv files"""
-
-    # TODO: This method belongs to the Position class --> Create update_in_cache()
-    def update_position_in_csv(
-        self,
-        position_id: int,
-        item: Item = None,
-        count: int = None,
-    ):
-        """Updates a position in a csv files"""
-
-    # TODO: This method belongs to the Position class --> Create remove_from_cache()
-    def delete_position_from_csv(
-        self,
-        positon_id: int,
-    ):
-        """Deletes a position from a csv file"""
-
-    def get_positions(self, order_id: int):
-        """Getter for the positions of a specified order"""
-        _positions = []
-        for pos in self.position_cache:
-            assert isinstance(pos, Position)
-            if pos.order_id is order_id:
-                _positions.append(pos)
-
-        return _positions
-
     def __str__(self):
         pass
 
 
 class OrderCache:
-    """Class caching orders"""
+    """
+    Handles the order cache of the application. Initializes by
+    reading all order saved in the orders.csv file. Depends on
+    the other application caches regarding the order feature.
+
+    Attributes
+    ----------
+    item_cache : ItemCache
+
+    customer_cache : CustomerCache
+
+    position_cache : PositionCache
+
+    _order_cache : set(Order)
+    """
 
     _order_cache = set()
 
@@ -209,6 +272,10 @@ class OrderCache:
         customer_cache: customer_management.CustomerCache,
         position_cache: PositionCache,
     ):
+        self._item_cache = item_cache
+        self._customer_cache = customer_cache
+        self._position_cache = position_cache
+
         _path = Path("./Datenbanken/orders.csv")
         _order_csv_exists = _path.exists()
         if _order_csv_exists:
@@ -216,13 +283,20 @@ class OrderCache:
                 lines = self._read_csv(_path)
                 _prep_order_str_list = self._remove_eol_from_str_list(lines)
                 _order_value_list = self._convert_str_to_order_values(
-                    _prep_order_str_list
+                    _prep_order_str_list,
                 )
 
                 # TODO: Loop through list of order values, generate order positions and build the list of order positions
                 print(f"_order_values: {_order_value_list}")
 
+                _position_number = 0
                 for order_value in _order_value_list:
+                    print(
+                        f"_positions: {order_value[0]}, _customer: {order_value[1]}, _order_state: {order_value[2]}"
+                    )
+
+                    _position_number += 1
+                    _order_id = int(order_value[0])
                     _positions = position_cache.get_positions(order_value[0])
                     _customer = customer_cache.get_customer(order_value[1])
                     _order_state = self._str_state_to_order_state(order_value[2])
@@ -235,9 +309,14 @@ class OrderCache:
                         customer=_customer,
                         positions=_positions,
                         state=_order_state,
+                        order_id=_order_id,
                     )
-
+                    # TODO: Order ID needs to be checked earlier, before Order is created
                     _order_id_exists = int(_order.order_id) in Order.order_id_set
+
+                    print(
+                        f"_order_id_exists: {_order_id_exists}, {_order.order_id} in {Order.order_id_set}"
+                    )
 
                     if not _order_id_exists:
                         self._order_cache.add(_order)
@@ -269,7 +348,7 @@ class OrderCache:
 
         for _order in self._order_cache:
             assert isinstance(_order, Order)
-            if _order.customer == _customer:
+            if _order.customer_id == _customer:
                 print(_order)
 
     def _read_csv(self, path: Path):
@@ -500,7 +579,7 @@ def order_processing_menu_loop(
                     print("        Fehler: Positionen konnten nicht erzeugt werden")
                 else:
                     _new_order = Order(
-                        customer=_unmodified_order.customer,
+                        customer=_unmodified_order.customer_id,
                         positions=_new_positions,
                         order_id=_unmodified_order.order_id,
                         state=_unmodified_order.state,

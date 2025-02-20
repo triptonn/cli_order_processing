@@ -126,11 +126,20 @@ class Position:
         unique order id of the order this position belongs to
     """
 
+    # TODO: Does position number work correctly?
+    position_id_set = set()
     position_number = 0
     position_id_counter = 0
     line_total = 0
 
-    def __init__(self, item: Item, count: int, order_id: int):
+    def __init__(
+        self,
+        item: Item,
+        count: int,
+        order_id: int,
+        position_number: int,
+        position_id: int = 0,
+    ):
         """
         Constructs all neccessary attributes for the position object.
 
@@ -148,10 +157,17 @@ class Position:
         None
         """
 
-        self.position_id_counter += 1
-        self.position_id = self.position_id_counter
-        self._order_id = order_id
+        if position_id == 0:
+            self.position_id_counter += 1
+            self.position_id = self.position_id_counter
+            self.position_id_set.add(self.position_id)
+        else:
+            self.position_id = position_id
+            self.position_id_set.add(position_id)
+            self.position_id_counter = max(self.position_id_counter, position_id)
 
+        self.position_number = position_number
+        self._order_id = order_id
         self.item = item
         self.count = count
         self.line_total = item.unit_price * count
@@ -206,24 +222,24 @@ class Position:
 
     def update_position_in_csv(self, item: Item = None, count: int = None):
         """
-            Updates the
+        Updates the
         position information contained in the csv file.
 
-            Only the position attribute received by the function gets changed.
+        Only the position attribute received by the function gets changed.
 
-            Parameters
-            ----------
-            item : Item, optional
-                Item object if position item needs to
-                be updated (default is None)
+        Parameters
+        ----------
+        item : Item, optional
+            Item object if position item needs to
+            be updated (default is None)
 
-            count : int, optional
-                New count if the item count needs to
-                be updated (default is None)
+        count : int, optional
+            New count if the item count needs to
+            be updated (default is None)
 
-            Returns
-            -------
-            None
+        Returns
+        -------
+        None
         """
 
         if item is not None:
@@ -330,7 +346,6 @@ class Order:
     order_id_set = set()
     _order_id_counter = 0
     _total_before_discount = 0.00
-    total = 0
     state = None
 
     default_quantity_discount_qualifier = 100.00
@@ -362,7 +377,7 @@ class Order:
 
             self.order_id = _order_id
 
-        self.customer = customer
+        self.customer_id = customer
         self._positions = positions
 
         for position in self._positions:
@@ -384,7 +399,7 @@ class Order:
 
         if _exists:
             with open(_orders_csv, "a", encoding="UTF-8") as file:
-                file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
+                file.write(f"{self.order_id};{self.customer_id};{self.state.value}\n")
         else:
             _directory = Path("./Datenbanken/")
             _directory_exists = _directory.exists()
@@ -392,8 +407,8 @@ class Order:
                 os.mkdir("./Datenbanken/")
 
             with open(_orders_csv, "w", encoding="UTF-8") as file:
-                file.write("order_id;customer;state\n")
-                file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
+                file.write("order_id;customer_id;state\n")
+                file.write(f"{self.order_id};{self.customer_id};{self.state.value}\n")
 
     def update_order_in_csv(
         self,
@@ -427,13 +442,13 @@ class Order:
                     lines = input_file.readlines()
                     for line in lines:
                         if line.strip("\n") != (
-                            f"{self.order_id};{self.customer};{self.state.value}\n"
+                            f"{self.order_id};{self.customer_id};{self.state.value}\n"
                         ):
                             output_file.write(line)
                         else:
                             output_file.write(
                                 f"{self.order_id};"
-                                f"{self.customer};"
+                                f"{self.customer_id};"
                                 f"{self.state.value}\n"
                             )
 
@@ -452,7 +467,7 @@ class Order:
                     lines = input_csv_file.readlines()
                     for line in lines:
                         if line.strip("\n") != (
-                            f"{self.order_id};{self.customer};{self.state.value}"
+                            f"{self.order_id};{self.customer_id};{self.state.value}"
                         ):
                             output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
@@ -462,16 +477,13 @@ class Order:
         return repr(
             (
                 self.order_id,
-                self.customer,
+                self.customer_id,
                 self.state,
-                self._positions,
-                self._total_before_discount,
             )
         )
 
     def __str__(self):
         return (
-            f"Nummer: {self.order_id}, Kunde: {self.customer}, "
-            f"Status: {self.state.value}, Positionen: {self._positions},"
-            f" Total: {self._total_before_discount}"
+            f"Nummer: {self.order_id}, Kunde: {self.customer_id}, "
+            f"Status: {self.state.value}"
         )
