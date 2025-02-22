@@ -1,16 +1,22 @@
-from pathlib import Path
+"""Module implementing the user management feature"""
+
 import copy
+from pathlib import Path
 
 import authentication
-import user_repository
 import printer
+import user_repository
 
 
 class UserCache:
+    """
+    Class for caching user objects
+    """
+
     user_cache = set()
 
     def __init__(self):
-        _prep_user_list= []
+        _prep_user_list = []
         _path = Path("./Datenbanken/user.csv")
         _user_csv_exists = _path.exists()
         if _user_csv_exists:
@@ -23,18 +29,30 @@ class UserCache:
 
                     for _listed_user in _prep_user_list:
                         _prep_user = str.split(_listed_user, sep=";")
-                        _user_id_exists = user_repository.User._user_id_set.__contains__(int(_prep_user[0]))
-                        _user = user_repository.User(_prep_user[1],_prep_user[2],bytes.fromhex(_prep_user[3]),bytes.fromhex(_prep_user[4]),int(_prep_user[0]))
+                        _user_id_exists = (
+                            user_repository.User._user_id_set.__contains__(
+                                int(_prep_user[0])
+                            )
+                        )
+                        _user = user_repository.User(
+                            _prep_user[1],
+                            _prep_user[2],
+                            bytes.fromhex(_prep_user[3]),
+                            bytes.fromhex(_prep_user[4]),
+                            int(_prep_user[0]),
+                        )
                         if not _user_id_exists:
                             self.user_cache.add(_user)
                         else:
-                            raise UserIDException(str(_user), "User ID ist bereits vergeben!")
-                        
+                            raise UserIDException(
+                                str(_user), "User ID ist bereits vergeben!"
+                            )
+
             except UserIDException as exc:
                 print(f"Caught UserIDException with custom_kwarg={exc.custom_kwarg}")
 
     def find_user_id(self, search_str: str):
-        '''Method to find a user id providing the name of the user'''
+        """Method to find a user id providing the name of the user"""
         _search_str = copy.copy(search_str)
         _possible_hits = []
         for u in self.user_cache:
@@ -47,11 +65,11 @@ class UserCache:
                 _possible_hits.append(u)
 
         for h in _possible_hits:
-            assert type(h) is user_repository.User
+            assert isinstance(h, user_repository.User)
             print(h)
 
     def get_user(self, user_id: int):
-        '''Method returning the user object provided the user id'''
+        """Method returning the user object provided the user id"""
         try:
             for _user in self.user_cache:
                 assert isinstance(_user, user_repository.User)
@@ -62,9 +80,8 @@ class UserCache:
             print(f"Caught UserNotFoundException while fetching user from cache: {exc}")
         return None
 
-
     def print_user_db(self):
-        '''Method printing the user cache to the console'''
+        """Method printing the user cache to the console"""
         for _user in self.user_cache:
             assert isinstance(_user, user_repository.User)
         _user_tuple = tuple[user_repository.User](self.user_cache)
@@ -77,16 +94,16 @@ class UserCache:
             print("       ", _user.output_print())
 
     def add_user_to_cache(self, user: user_repository.User):
-        '''Method to add a user object to the user cache'''
+        """Method to add a user object to the user cache"""
         self.user_cache.add(user)
 
     def update_cached_user(self, old: user_repository.User, new: user_repository.User):
-        '''Method to update a user object inside the user cache'''
+        """Method to update a user object inside the user cache"""
         self.user_cache.remove(old)
         self.user_cache.add(new)
 
     def remove_cached_user(self, user: user_repository.User):
-        '''Method to remove a user object from the user cache'''
+        """Method to remove a user object from the user cache"""
         self.user_cache.remove(user)
 
     def __iter__(self):
@@ -98,27 +115,31 @@ class UserCache:
 
 
 class UserDBException(Exception):
-    '''A base class for UserDBExceptions'''
+    """A base class for UserDBExceptions"""
 
 
 class UserNotFoundException(UserDBException):
-    '''Exception catching cases where the user'''
+    """Exception catching cases where the user"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
-        # TODO:
-        self.custom_kwarg = kwargs.get('custom_kwarg')
+        # TODO: Implement UserNotFoundException
+        self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
 class UserIDException(UserDBException):
-    '''Exception catching invalid user ids'''
+    """Exception catching invalid user ids"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
-        # TODO:
-        self.custom_kwarg = kwargs.get('custom_kwarg')
+        # TODO: Implement UserIDException
+        self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
-def user_management_menu_loop(user_cache: UserCache, authenticated_user: authentication.AuthenticatedUser):
-    '''Function containing the menu loop of the user management feature'''
+def user_management_menu_loop(
+    user_cache: UserCache, authenticated_user: authentication.AuthenticatedUser
+):
+    """Function containing the menu loop of the user management feature"""
 
     _menu_string = """
         ##########################################################################################################
@@ -136,7 +157,6 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
         ##########################################################################################################
     """
 
-
     _user_management = True
     while _user_management is True:
         print(_menu_string)
@@ -153,26 +173,31 @@ def user_management_menu_loop(user_cache: UserCache, authenticated_user: authent
             _username_hash = _authenticator.custom_hash(_username)
             _password_hash = _authenticator.custom_hash(_password)
 
-            _user = user_repository.User(_lastname, _name, _username_hash.hex(), _password_hash.hex())
+            _user = user_repository.User(
+                _lastname, _name, _username_hash.hex(), _password_hash.hex()
+            )
 
             _user.save_user_to_csv()
             user_cache.add_user_to_cache(_user)
 
         elif _menu_item == "2":
-            # TODO:
+            # TODO: Edit user needs to be implemented
             pass
 
         elif _menu_item == "3":
-            # TODO:
+            # TODO: Delete User needs to be implemented
             pass
+
         elif _menu_item == "4":
             user_cache.print_user_db()
 
         elif _menu_item == "5":
-            # TODO:
+            # TODO: Find user number
             pass
+
         elif _menu_item == "6":
             _user_management = False
             break
+
         elif _menu_item == "c":
             printer.Printer.clear_cli()

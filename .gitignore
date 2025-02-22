@@ -1,4 +1,5 @@
 /.venv
+/Datenbanken/user.csv
 /.VSCodeCounter
 /.planung
 /__pycache__
