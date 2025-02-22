@@ -123,42 +123,51 @@ class PositionCache:
     """
     Class for caching position objects
 
+    Parameters
+    ----------
+    item_cache : ItemCache
+
     Attributes
     ----------
-    position_cache :
-
+    position_cache : PositionCache
     """
 
     position_cache = set()
 
     def __init__(self, item_cache: ItemCache):
+        assert isinstance(item_cache, ItemCache)
+
         _path = Path("./Datenbanken/positions.csv")
         _position_csv_exists = _path.exists()
         if _position_csv_exists:
             try:
                 lines = self._read_csv(_path)
                 _prep_position_str_list = self._remove_eol_from_str_list(lines)
-                _position_value_list = self._convert_str_to_position_values(
+                _position_value_list = self._convert_str_list_to_position_values(
                     _prep_position_str_list
                 )
 
                 print(f"_position_value_list: {_position_value_list}")
 
                 for position_value in _position_value_list:
-                    _item = item_cache.get_item(position_value[1])
-                    _count = position_value[2]
-                    _order_id = position_value[0]
-                    _position_number = position_value[3]
+                    _position_id = position_value[0]
+                    _position_number = position_value[1]
+                    _order_id = position_value[2]
+                    _item = item_cache.get_item(position_value[3])
+                    _count = position_value[4]
                     _position = Position(
                         item=_item,
                         count=_count,
                         order_id=_order_id,
                         position_number=_position_number,
+                        position_id=_position_id,
                     )
                     self.add_position_to_cache(_position)
-
-            except Exception:
-                pass
+            except AssertionError as err:
+                print(
+                    "Caught an AssertionError on ItemCache object during "
+                    f"PositionCache initialization: {err}"
+                )
 
     def get_positions(self, order_id: int):
         """
@@ -167,7 +176,6 @@ class PositionCache:
         Paramaters
         ----------
         order_id : int
-            order id as integer
 
         Returns
         -------
@@ -187,28 +195,21 @@ class PositionCache:
         Parameters
         ----------
         position : Position
-
-        Returns
-        -------
-        None
-
         """
-
         self.position_cache.add(position)
 
-    def update_position_in_cache(self, old_position: Position, new_position: Position):
+    def update_position_in_cache(
+        self,
+        old_position: Position,
+        new_position: Position,
+    ):
         """
-        Updates a position object in cache
+        Swaps a position object in the cache for an updated position object
 
         Parameters
         ----------
         old_positon : Position
-
-        new_position  : Position
-
-        Returns
-        -------
-        None
+        new_position : Position
         """
 
         self.position_cache.remove(old_position)
@@ -221,16 +222,12 @@ class PositionCache:
         Parameters
         ----------
         position : Position
-
-        Returns
-        -------
-        None
-
         """
 
         self.position_cache.remove(position)
 
     def _read_csv(self, path: Path):
+        """Reads lines from a csv file at provided Path -> list(str)"""
         _path = path
         with open(_path, "r", encoding="UTF-8") as _positiondb:
             lines = _positiondb.readlines()
@@ -238,13 +235,48 @@ class PositionCache:
             return lines
 
     def _remove_eol_from_str_list(self, lines: list[str]):
+        """Removes eol from each str in list -> list(str)"""
         _eol_removed_str_list = []
         for line in lines:
-            _eol_removed_str_list.append(line.stript("\n"))
+            _eol_removed_str_list.append(line.strip("\n"))
         return _eol_removed_str_list
 
-    def __str__(self):
-        pass
+    def _convert_str_list_to_position_values(
+        self,
+        position_string_list: [str],
+    ):
+        """Returns a list of values describing a Position object"""
+
+        _position_values = []
+        for _listed_position in position_string_list:
+            _prep_position = str.split(_listed_position, sep=";")
+            print(f"_prep_position: {_prep_position}")
+            if isinstance(_prep_position, list):
+                _position_values.append(_prep_position)
+            else:
+                raise StringToPositionConversionException
+
+        return _position_values
+
+
+class PositionCacheException(Exception):
+    """Base ItemCache exception class"""
+
+
+class PositionCacheInitializationException(PositionCacheException):
+    """Catches exceptions during initialization of the item cache"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
+class StringToPositionConversionException(PositionCacheException):
+    """Catches exceptions during str to position value conversion"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
 class OrderCache:
@@ -292,7 +324,9 @@ class OrderCache:
                 _position_number = 0
                 for order_value in _order_value_list:
                     print(
-                        f"_positions: {order_value[0]}, _customer: {order_value[1]}, _order_state: {order_value[2]}"
+                        f"_positions: {order_value[0]}, "
+                        f"_customer: {order_value[1]}, "
+                        f"_order_state: {order_value[2]}"
                     )
 
                     _position_number += 1
@@ -302,7 +336,9 @@ class OrderCache:
                     _order_state = self._str_state_to_order_state(order_value[2])
 
                     print(
-                        f"_positions: {_positions}, _customer: {_customer}, _order_state: {_order_state}"
+                        f"_positions: {_positions}, "
+                        f"_customer: {_customer}, "
+                        f"_order_state: {_order_state}"
                     )
 
                     _order = Order(
@@ -311,11 +347,13 @@ class OrderCache:
                         state=_order_state,
                         order_id=_order_id,
                     )
+
                     # TODO: Order ID needs to be checked earlier, before Order is created
                     _order_id_exists = int(_order.order_id) in Order.order_id_set
 
                     print(
-                        f"_order_id_exists: {_order_id_exists}, {_order.order_id} in {Order.order_id_set}"
+                        f"_order_id_exists: {_order_id_exists}, "
+                        f"{_order.order_id} in {Order.order_id_set}"
                     )
 
                     if not _order_id_exists:

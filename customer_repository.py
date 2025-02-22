@@ -43,16 +43,28 @@ class Customer:
 
     def print_address(self):
         """Method prints information about the customer to the screen"""
-        return f"Kunde: {self.customer_id}: {self.street} {self.house_number}, {self.postcode} {self.city}"
+        _str = (
+            f"Kunde: {self.customer_id}: {self.street} "
+            f"{self.house_number}, {self.postcode} {self.city}"
+        )
+        return _str
 
     def save_customer_to_csv(self):
+        """Saves customer object information as string to csv file"""
         _customer_csv = Path("./Datenbanken/kunden.csv")
         _exists = _customer_csv.exists()
 
         if _exists:
             with open(_customer_csv, "a", encoding="UTF-8") as file:
                 file.write(
-                    f"{self.customer_id};{self.name};{self.name};{self.company};{self.street};{self.house_number};{self.postcode};{self.city};\n"
+                    f"{self.customer_id};"
+                    f"{self.name};"
+                    f"{self.name};"
+                    f"{self.company};"
+                    f"{self.street};"
+                    f"{self.house_number};"
+                    f"{self.postcode};"
+                    f"{self.city}\n"
                 )
         else:
             os.mkdir("./Datenbanken/")
@@ -61,7 +73,7 @@ class Customer:
                     "Kundennummer;Name;Vorname;Firma;Strasse;Hausnummer;Postleitzahl;Ort\n"
                 )
                 file.write(
-                    f"{self.customer_id};{self.name};{self.name};{self.company};{self.street};{self.house_number};{self.postcode};{self.city};\n"
+                    f"{self.customer_id};{self.name};{self.name};{self.company};{self.street};{self.house_number};{self.postcode};{self.city}\n"
                 )
 
     def update_customer_in_csv(
