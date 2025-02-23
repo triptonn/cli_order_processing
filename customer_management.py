@@ -89,8 +89,8 @@ class CustomerCache:
             for _customer in self._customer_cache:
                 assert isinstance(_customer, Customer)
                 if (
-                    _customer.lastname == _lastname or _customer.name == _name
-                ) and _customer.company == _company:
+                    _customer.lastname == _lastname and _customer.name == _name
+                ) or _customer.company == _company:
                     print(f"Found customer: {_customer}")
                     return _customer.customer_id
             return None

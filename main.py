@@ -3,11 +3,11 @@
 import getpass
 
 import authentication
-import order_processing
 import customer_management
+import order_processing
+import printer
 import user_management
 import user_repository
-import printer
 
 
 class MainMenu:
@@ -58,7 +58,10 @@ class MainMenu:
 
             if _menu_item == "1":
                 order_processing.order_processing_menu_loop(
-                    self.customer_cache, self.order_cache, self.item_cache
+                    self.customer_cache,
+                    self.order_cache,
+                    self.position_cache,
+                    self.item_cache,
                 )
 
             elif _menu_item == "2":

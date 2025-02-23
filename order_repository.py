@@ -5,7 +5,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-import customer_repository
+from customer_repository import Customer
 
 
 class Item:
@@ -153,14 +153,14 @@ class Position:
         """
 
         if position_id == 0:
-            self.position_id_counter += 1
-            self.position_id = self.position_id_counter
-            self.position_id_set.add(self.position_id)
+            Position.position_id_counter += 1
+            self.position_id = Position.position_id_counter
+            Position.position_id_set.add(self.position_id)
         else:
             self.position_id = position_id
-            self.position_id_set.add(position_id)
-            self.position_id_counter = max(
-                self.position_id_counter,
+            Position.position_id_set.add(position_id)
+            Position.position_id_counter = max(
+                Position.position_id_counter,
                 int(position_id),
             )
 
@@ -365,8 +365,8 @@ class Order:
 
     def __init__(
         self,
-        customer: customer_repository.Customer,
-        positions: List,
+        customer: Customer,
+        positions: list[Position],
         order_id: int = 0,
         state: OrderState = OrderState.OPENED,
     ):
@@ -390,7 +390,7 @@ class Order:
             self.order_id = _order_id
 
         self.customer_id = customer
-        self._positions = positions
+        self.positions = positions
 
         # TODO: Discount needs to be implemented
 
@@ -437,13 +437,13 @@ class Order:
             self.state = state
 
         if _positions is not None:
-            self._positions = _positions
+            self.positions = _positions
 
         assert isinstance(self.state, OrderState)
-        assert isinstance(self._positions, List[Position])
+        assert isinstance(self.positions, List[Position])
 
         self._total_before_discount = 0.00
-        for position in self._positions:
+        for position in self.positions:
             assert isinstance(position, Position)
             self._total_before_discount += position.line_total
 
@@ -491,7 +491,6 @@ class Order:
 
     def next_available_id(self) -> int:
         """Returns smallest available order id"""
-
         _diff = set(range(len(self.order_id_set))).difference(self.order_id_set)
         _min = min(_diff)
         return int(_min)

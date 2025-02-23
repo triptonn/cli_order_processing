@@ -1,11 +1,11 @@
 """Caches and menus of the order processing module"""
 
 import copy
-import traceback
 from pathlib import Path
 
 import customer_management
 import printer
+from customer_repository import Customer
 from order_repository import Item, Order, OrderState, Position
 
 
@@ -567,6 +567,7 @@ class StringToOrderConversionException(OrderDBException):
 def order_processing_menu_loop(
     customer_cache: customer_management.CustomerCache,
     order_cache: OrderCache,
+    position_cache: PositionCache,
     item_cache: ItemCache,
 ):
     """Function running the menu loop of the order processing feature"""
@@ -595,61 +596,19 @@ def order_processing_menu_loop(
         )
 
         if _menu_item == "1":
-            _customer_string = input("        Kundenname:")
-            _customer_id = customer_cache.find_customer_id(
-                company=_customer_string,
+            result: bool = create_order(
+                item_cache,
+                customer_cache,
+                order_cache,
             )
-            _customer = customer_cache.get_customer(_customer_id)
-            if _customer is None:
+            if result is False:
                 continue
 
-            _temp_order = Order(_customer, [])
-            _temp_order_id = _temp_order.order_id
-            _temp_order.positions = get_order_positions(
-                item_cache,
-                _temp_order_id,
-            )
-
-            if _temp_order.positions is None:
-                print(
-                    "        Fehler: Positionen konnten nicht erstellt werden",
-                )
-            else:
-                if _customer:
-
-                    _order = Order(_customer, _positions)
-                    _order.save_order_to_csv()
-                    order_cache.add_order_to_cache(_order)
-                    print("        Auftrag erfolgreich erstellt")
-                else:
-                    print("        Fehler: Kunde nicht gefunden")
-
         elif _menu_item == "2":
-            _local_item_number = input(
-                "        Bitte geben sie die "
-                "Auftragsnummer des zu bearbeitenden Auftrags ein:"
+            result: bool = modify_order(
+                position_cache,
+                order_cache,
             )
-
-            _unmodified_order = order_cache.get_order(int(_local_item_number))
-
-            if _unmodified_order is None:
-                pass
-            else:
-                # TODO: Fix function parameters
-                _new_positions = get_order_positions(item_cache)
-
-                if _new_positions is None:
-                    print("        Fehler: Positionen konnten nicht erzeugt werden")
-                else:
-                    _new_order = Order(
-                        customer=_unmodified_order.customer_id,
-                        positions=_new_positions,
-                        order_id=_unmodified_order.order_id,
-                        state=_unmodified_order.state,
-                    )
-                    order_cache.update_cached_order(_unmodified_order, _new_order)
-                    _unmodified_order.delete_order_in_csv()
-                    _new_order.save_order_to_csv()
 
         elif _menu_item == "3":
             _local_item_number = input(
@@ -677,72 +636,190 @@ def order_processing_menu_loop(
             printer.Printer.clear_cli()
 
 
-def get_order_positions(item_cache: ItemCache, order_id: int) -> list[Position]:
-    """Function to build the positions object when creating an order"""
-    _order_id: int = order_id
-    _order_number_counter: int = 1
-    _adding_positions: bool = True
-    _position_value_str_int: list[(str, int, int)] = []
-    _positions: list[Position] = []
-    while _adding_positions:
-        _count = None
-        _position_valid = True
+def create_order(
+    item_cache: ItemCache,
+    customer_cache: customer_management.CustomerCache,
+    order_cache: OrderCache,
+) -> bool:
+    """
+    Creates new Order object
+    """
+    _customer_string = input("        Kundenname: ")
+    _customer_id = customer_cache.find_customer_id(
+        company=_customer_string,
+    )
+    _customer: Customer = customer_cache.get_customer(_customer_id)
+    if _customer is None:
+        return False
 
-        _item_name_or_number_str = input(
-            "        Itemname oder -nummer"
-            " ('fertig' um die Eingabe von"
-            " Positionen zu beenden): "
+    _order = Order(_customer, [])
+    _temp_order_id = _order.order_id
+    _order.positions = get_order_positions(
+        item_cache,
+        _temp_order_id,
+    )
+
+    if _order.positions is None:
+        print(
+            "        Fehler: Positionen konnten nicht erstellt werden",
+        )
+        return False
+
+    if isinstance(_order, Order):
+        _order.save_order_to_csv()
+        order_cache.add_order_to_cache(_order)
+        print("        Auftrag erfolgreich erstellt")
+        return True
+
+    print("        Fehler: Kunde nicht gefunden")
+    return False
+
+
+def modify_order(
+    item_cache: ItemCache,
+    position_cache: PositionCache,
+    order_cache: OrderCache,
+) -> bool:
+    """
+    Manages modifying an Order object
+
+
+    """
+    _local_item_number = input(
+        "        Bitte geben sie die "
+        "Auftragsnummer des zu bearbeitenden Auftrags ein:"
+    )
+
+    _unmodified_order = order_cache.get_order(int(_local_item_number))
+
+    if _unmodified_order is None:
+        pass
+    else:
+        # TODO: How to handle the modification of the order positions?
+        _new_positions = get_order_positions(
+            item_cache,
+            _unmodified_order.order_id,
         )
 
-        if _item_name_or_number_str == "fertig":
+        if _new_positions is None:
+            print("        Fehler: Positionen konnten nicht erzeugt werden")
+            return False
+        _new_order = Order(
+            customer=_unmodified_order.customer_id,
+            positions=_new_positions,
+            order_id=_unmodified_order.order_id,
+            state=_unmodified_order.state,
+        )
+        order_cache.update_cached_order(_unmodified_order, _new_order)
+        _unmodified_order.delete_order_in_csv()
+        _new_order.save_order_to_csv()
+    return True
+
+
+def get_order_positions(
+    item_cache: ItemCache,
+    order_id: int,
+) -> list[Position] | None:
+    """
+    Function to build the positions object when creating an order
+
+
+    """
+    _order_id: int = order_id
+    _adding_positions: bool = True
+    _position_number_counter: int = 1
+    _positions: list[Position] = []
+    while _adding_positions:
+        _item_str = get_item_name_or_number()
+        if _item_str == "fertig":
             print("        Keine weiteren Items.")
             break
 
-        _count_str = input("        Stück: ")
-        try:
-            _count = int(_count_str)
-        except ValueError as exc:
-            print(exc)
+        _count: int | None = get_item_count()
+        if _count is None:
             continue
 
-        if _item_name_or_number_str != "" and _position_valid:
-            _position_value_str_int.append(
-                [_item_name_or_number_str, _count, _order_number_counter],
+        if _item_str == "":
+            print(
+                "        Position lässt sich nicht aus den Angaben erzeugen!",
             )
+            continue
+
+        try:
+            item_number: int = int(_item_str)
+            print(f"Item {_position_number_counter} is integer...")
+        except ValueError:
+            print(f"Item {_position_number_counter} is str...")
+            item_name = _item_str
+            item_number = item_cache.find_item_number(item_name)
+            if item_number is None:
+                print(f"Item {_position_number_counter} is not valid... try again...")
+                continue
+
+        _item: Item | None = item_cache.get_item(item_number)
+        try:
+            assert isinstance(_item, Item)
+        except AssertionError:
+            print(
+                f"Item {_position_number_counter} ",
+                "is not valid... try again...",
+            )
+            continue
+
+        _position_item: Item | None = _item
+        if isinstance(_position_item, Item):
+            print(f"Item data: {_item}")
+            _position = Position(
+                _position_item,
+                _count,
+                _order_id,
+                _position_number_counter,
+            )
+            print(f"Position: {_position}")
+            _position.save_position_to_csv()
+            _positions.append(_position)
         else:
             print(
-                "        Position lässt sich aus den Angaben nicht erzeugen!",
+                f"        Warnung: '{_item}' nicht gefunden"
+                "... Bitte nochmal versuchen..."
             )
             continue
-        _order_number_counter += 1
 
-    for _position_value in _position_value_str_int:
-        try:
-            item_number = int(_position_value[0])
-            item = item_cache.get_item(item_number)
-        except ValueError:
-            item_name = _position_value[0]
-            item_number = item_cache.find_item_number(item_name)
-            item = item_cache.get_item(item_number)
+        _position_number_counter += 1
 
-        if item is not None:
-            print(f"Item data: {_position_value}")
-            position = Position(
-                item_cache.get_item(int(_position_value[0])),
-                _position_value[1],
-                _position_value[2],
-                _order_id,
-            )
+    print(f"_positions: {_positions}")
+    if not isinstance(_positions, list[Position]):
+        print(
+            "        Fehler: Keine gültigen Positionen eingegeben... "
+            "Bitte starten probieren sie es noch einmal..."
+        )
+        return None
 
-            position.save_position_to_csv()
-            _positions.append(position)
-        else:
-            print(f"        Warnung: Item '{_position_value[0]}' nicht gefunden")
+    return _positions
 
-    if _positions:
-        return _positions
 
-    print("        Fehler: Keine gültigen Positionen eingegeben")
+def get_item_name_or_number() -> str:
+    """
+    Asks user for input of an item name or item number for this position -> str
+    """
+    _item_name_or_number_str = input(
+        "        Itemname oder -nummer"
+        " ('fertig' um die Eingabe von"
+        " Positionen zu beenden): "
+    )
+    return _item_name_or_number_str
+
+
+def get_item_count() -> int | None:
+    """Asks user for input of an item count for this position"""
+    _count = None
+    _count_str = input("        Stück: ")
+    try:
+        _count = int(_count_str)
+        return _count
+    except ValueError:
+        print("Value is not a valid integer... try again...")
+        return None
 
 
 def item_management_menu_loop(item_cache: ItemCache):
