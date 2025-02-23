@@ -5,6 +5,29 @@ from pathlib import Path
 
 
 class Customer:
+    """
+    Data class of the Customer object
+
+    Attributes
+    ----------
+    customer_id : int
+        Unique identifier
+    lastname : str
+        Lastname of contact
+    name : str
+        Firstname of contact
+    company : str
+        Company name
+    street : str
+        Street name
+    house_number : str
+        House number
+    postcode : str
+        Postcode
+    city : str
+        City
+    """
+
     customer_id_set = set()
     _customer_id_counter = 0
 

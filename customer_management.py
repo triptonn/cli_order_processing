@@ -1,14 +1,17 @@
 """Module builds the customer management feature"""
 
 import copy
+import traceback
 from pathlib import Path
 
-import customer_repository
 import printer
+from customer_repository import Customer
 
 
 class CustomerCache:
-    """Class for caching customers"""
+    """
+    Class for caching customers
+    """
 
     _customer_cache = set()
 
@@ -26,12 +29,10 @@ class CustomerCache:
 
                     for _listed_customer in _prep_customer_list:
                         _prep_customer = str.split(_listed_customer, sep=";")
-                        _customer_id_exists = (
-                            customer_repository.Customer.customer_id_set.__contains__(
-                                int(_prep_customer[0])
-                            )
+                        _customer_id_exists = Customer.customer_id_set.__contains__(
+                            int(_prep_customer[0])
                         )
-                        _customer = customer_repository.Customer(
+                        _customer = Customer(
                             _prep_customer[1],
                             _prep_customer[2],
                             _prep_customer[3],
@@ -53,8 +54,25 @@ class CustomerCache:
                     f"Caught CustomerIDException with custom_kwarg={exc.custom_kwarg}"
                 )
 
-    def find_customer_id(self, lastname="", name="", company=""):
-        """Method to find a customer id by the name of the customer"""
+    def find_customer_id(
+        self,
+        lastname: str = "",
+        name: str = "",
+        company: str = "",
+    ) -> int | None:
+        """
+        Find a customer id by the name of the contact or
+        the company name.
+        Returns None if no matching customer is found.
+
+        Returns
+        -------
+        int | None
+
+        Raises
+        ------
+        AssertionError
+        """
 
         _lastname = ""
         _name = ""
@@ -67,49 +85,73 @@ class CustomerCache:
         if company != "":
             _company = company
 
-        for _customer in self._customer_cache:
-            assert isinstance(_customer, customer_repository.Customer)
+        try:
+            for _customer in self._customer_cache:
+                assert isinstance(_customer, Customer)
+                if (
+                    _customer.lastname == _lastname or _customer.name == _name
+                ) and _customer.company == _company:
+                    print(f"Found customer: {_customer}")
+                    return _customer.customer_id
+            return None
 
-            if (
-                _customer.lastname == _lastname or _customer.name == _name
-            ) and _customer.company == _company:
-                print(_customer)
+        except AssertionError as err:
+            print(
+                "Caught an AssertionError while trying",
+                f"to find a customer id: {err}",
+            )
 
-            return _customer.customer_id
+        return None
 
-    def get_customer(self, customer_id: int):
+    def get_customer(self, customer_id: int) -> Customer | None:
         """Method to get the customer object by providing the customer id"""
         try:
             for _customer in self._customer_cache:
-                assert isinstance(_customer, customer_repository.Customer)
+                assert isinstance(_customer, Customer)
                 if customer_id == _customer.customer_id:
                     return copy.copy(_customer)
             raise CustomerNotFoundException(
-                f"Customer {customer_id} not found in cache!"
+                f"Customer {customer_id} not found in cache!\n"
+                f"Traceback: {traceback.format_exc(chain=True)}"
             )
-        except CustomerNotFoundException:
-            print(self._customer_cache, type(self._customer_cache))
+        except AssertionError as err:
+            print(
+                f"Caught an AssertionError while getting "
+                f"a Customer by its id: {customer_id}, {type(customer_id)}"
+                f"Error: {err}"
+            )
+        except CustomerNotFoundException as exc:
+            print(
+                f"\nCaught CustomerNotFoundException:\n"
+                f"Snapshot CustomerCache: "
+                f"{sorted(list(
+                    self._customer_cache),
+                    key=lambda customer: customer.customer_id,
+                )},"
+                f" The missing customer id: {customer_id}\n"
+                f"Exception: {exc}"
+            )
         return None
 
-    def add_customer_to_cache(self, customer: customer_repository.Customer):
+    def add_customer_to_cache(self, customer: Customer) -> None:
         """Method to add a customer to the customer cache"""
         self._customer_cache.add(customer)
 
-    def remove_customer_from_cache(self, customer: customer_repository.Customer):
+    def remove_customer_from_cache(self, customer: Customer):
         """Method to remove a customer from the customer cache"""
         self._customer_cache.remove(customer)
 
-    def update_cached_customer(
-        self, old: customer_repository.Customer, new: customer_repository.Customer
-    ):
+    def update_cached_customer(self, old: Customer, new: Customer):
         """Method to update a customer residing in the customer cache"""
         self._customer_cache.remove(old)
         self._customer_cache.add(new)
 
-    def print_customer_db(self):
-        """Method to print the content of the customer cache to the console"""
+    def print_customer_db(self) -> None:
+        """
+        Method to print the content of the customer cache to the console
+        """
         for _customer in self._customer_cache:
-            assert isinstance(_customer, customer_repository.Customer)
+            assert isinstance(_customer, Customer)
         _customer_tuple = tuple(self._customer_cache)
 
         _customer_list = sorted(
@@ -117,7 +159,7 @@ class CustomerCache:
         )
         print("")
         for _customer in _customer_list:
-            assert isinstance(_customer, customer_repository.Customer)
+            assert isinstance(_customer, Customer)
             print("       ", _customer.output_print())
 
         print("")
@@ -130,19 +172,19 @@ class CustomerCache:
         return f"{self._customer_cache}"
 
 
-class CustomerDBException(Exception):
-    "A base class for CustomerDBExceptions"
+class CustomerException(Exception):
+    """A base class for CustomerDBExceptions"""
 
 
-class CustomerIDExcpetion(CustomerDBException):
-    """Exception catching invalid customer ids"""
+class CustomerIDExcpetion(CustomerException):
+    """Exception catching invalid customer id's"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
         self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
-class CustomerNotFoundException(CustomerDBException):
+class CustomerNotFoundException(CustomerException):
     """Exception catching if the provided customer cannot be found"""
 
     def __init__(self, *args, **kwargs):
@@ -152,13 +194,13 @@ class CustomerNotFoundException(CustomerDBException):
 
 def customer_management_loop(customer_cache: CustomerCache):
     """Function building the menu loop of the customer management feature"""
-    _customer_cache = customer_cache
 
+    _customer_cache = customer_cache
     _menu_string = """
         #########################################################################################################
-        
+
         Kundendatenbank
-        
+
         Menü:                                                                          'c' um Bildschirm zu räumen
         1. Neuen Kunden anlegen
         2. Kunden bearbeiten
@@ -166,7 +208,7 @@ def customer_management_loop(customer_cache: CustomerCache):
         4. Kundenliste ausgeben
         5. Kundennummer finden
         6. Zurück zum Hauptmenü
-        
+
         ##########################################################################################################
     """
 
@@ -185,7 +227,7 @@ def customer_management_loop(customer_cache: CustomerCache):
             _postcode = input("        Postleitzahl: ")
             _city = input("        Ort: ")
 
-            _customer = customer_repository.Customer(
+            _customer = Customer(
                 _name, _lastname, _company, _street, _house_number, _postcode, _city
             )
             _customer.save_customer_to_csv()
@@ -203,7 +245,7 @@ def customer_management_loop(customer_cache: CustomerCache):
             if _unmodified_customer is None:
                 pass
             else:
-                assert isinstance(_unmodified_customer, customer_repository.Customer)
+                assert isinstance(_unmodified_customer, Customer)
 
                 _lastname = input("        Nachname: ")
                 _name = input("        Vorname: ")
@@ -213,7 +255,7 @@ def customer_management_loop(customer_cache: CustomerCache):
                 _postcode = input("        Postleitzahl: ")
                 _city = input("        Ort: ")
 
-                _new_customer = customer_repository.Customer(
+                _new_customer = Customer(
                     (
                         _lastname
                         if _lastname != _unmodified_customer.lastname
@@ -268,7 +310,7 @@ def customer_management_loop(customer_cache: CustomerCache):
                     f"Zu löschender Kunde {_customer_id} konnte nicht gefunden werden!"
                 )
             else:
-                assert isinstance(_customer_to_delete, customer_repository.Customer)
+                assert isinstance(_customer_to_delete, Customer)
                 customer_cache.remove_customer_from_cache(_customer_to_delete)
                 _customer_to_delete.delete_customer_from_csv()
 

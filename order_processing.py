@@ -1,6 +1,7 @@
 """Caches and menus of the order processing module"""
 
 import copy
+import traceback
 from pathlib import Path
 
 import customer_management
@@ -9,7 +10,7 @@ from order_repository import Item, Order, OrderState, Position
 
 
 class ItemCache:
-    """Cache to hold the loaded items
+    """Cache to hold Item objects
 
     Raises:
         ItemNumberException: _description_
@@ -19,10 +20,10 @@ class ItemCache:
         _type_: _description_
     """
 
-    _item_cache = set()
+    _item_cache: set[Item] = set()
 
-    def __init__(self):
-        _prep_item_list = []
+    def __init__(self) -> None:
+        _prep_item_list: list[str] = []
         _path = Path("./Datenbanken/items.csv")
         _item_csv_exists = _path.exists()
         if _item_csv_exists:
@@ -59,7 +60,7 @@ class ItemCache:
             except ValueError as exc:
                 print(f"Caugh ValueError while initializing item cache: {exc.args}")
 
-    def find_item_number(self, item_name: str):
+    def find_item_number(self, item_name: str) -> int | None:
         """Method to find the item number by name of the item"""
 
         if item_name == "":
@@ -71,7 +72,7 @@ class ItemCache:
                 return item.item_number
             return None
 
-    def get_item(self, item_number: int):
+    def get_item(self, item_number: int) -> Item | None:
         """Method used to return the item object by its item number"""
 
         if item_number is None:
@@ -81,29 +82,27 @@ class ItemCache:
             for item in self._item_cache:
                 assert isinstance(item, Item)
                 if item.item_number == item_number:
+                    # TODO: Copy cool here?
                     return copy.copy(item)
 
-            raise ItemNotFoundException("Item with number " f"{item_number} not found")
-
         except ItemNotFoundException:
-            print("Caught ItemNotFoundException: " f"Item {item_number} not found")
-
+            print("Caught ItemNotFoundException: Item {item_number} not found")
         return None
 
-    def add_item_to_cache(self, item: Item):
+    def add_item_to_cache(self, item: Item) -> None:
         """Method used to add an item to the item cache"""
         self._item_cache.add(item)
 
-    def remove_item_from_cache(self, item: Item):
+    def remove_item_from_cache(self, item: Item) -> None:
         """Method used to remove an item from the item cache"""
         self._item_cache.pop(item)
 
-    def update_cached_item(self, old: Item, new: Item):
+    def update_cached_item(self, old: Item, new: Item) -> None:
         """Method used to update an item residing in the item cache"""
         self._item_cache.pop(old)
         self._item_cache.add(new)
 
-    def print_item_cache(self):
+    def print_item_cache(self) -> None:
         """Method used to print out the content of the item cache"""
         _item_tuple = tuple[Item](self._item_cache)
         _item_list = sorted(_item_tuple, key=lambda i: i.item_number)
@@ -169,7 +168,7 @@ class PositionCache:
                     f"PositionCache initialization: {err}"
                 )
 
-    def get_positions(self, order_id: int):
+    def get_positions(self, order_id: int) -> list[Position]:
         """
         Gets all positions of an order provided the order id
 
@@ -188,7 +187,7 @@ class PositionCache:
                 _hits.append(pos)
         return _hits
 
-    def add_position_to_cache(self, position: Position):
+    def add_position_to_cache(self, position: Position) -> None:
         """
         Adds a position object to cache
 
@@ -202,7 +201,7 @@ class PositionCache:
         self,
         old_position: Position,
         new_position: Position,
-    ):
+    ) -> None:
         """
         Swaps a position object in the cache for an updated position object
 
@@ -215,7 +214,7 @@ class PositionCache:
         self.position_cache.remove(old_position)
         self.position_cache.add(new_position)
 
-    def remove_position_from_cache(self, position: Position):
+    def remove_position_from_cache(self, position: Position) -> None:
         """
         Removes a position object from cache
 
@@ -226,7 +225,7 @@ class PositionCache:
 
         self.position_cache.remove(position)
 
-    def _read_csv(self, path: Path):
+    def _read_csv(self, path: Path) -> list[str]:
         """Reads lines from a csv file at provided Path -> list(str)"""
         _path = path
         with open(_path, "r", encoding="UTF-8") as _positiondb:
@@ -234,7 +233,7 @@ class PositionCache:
             lines.pop(0)
             return lines
 
-    def _remove_eol_from_str_list(self, lines: list[str]):
+    def _remove_eol_from_str_list(self, lines: list[str]) -> list[str]:
         """Removes eol from each str in list -> list(str)"""
         _eol_removed_str_list = []
         for line in lines:
@@ -244,8 +243,10 @@ class PositionCache:
     def _convert_str_list_to_position_values(
         self,
         position_string_list: [str],
-    ):
-        """Returns a list of values describing a Position object"""
+    ) -> list[list[str]]:
+        """
+        Returns a list of lists of value strings, describing a Position object
+        """
 
         _position_values = []
         for _listed_position in position_string_list:
@@ -324,16 +325,25 @@ class OrderCache:
                 _position_number = 0
                 for order_value in _order_value_list:
                     print(
-                        f"_positions: {order_value[0]}, "
-                        f"_customer: {order_value[1]}, "
-                        f"_order_state: {order_value[2]}"
+                        f"order id: {order_value[0]};"
+                        f"customer: {order_value[1]};"
+                        f"order state: {order_value[2]}"
+                    )
+
+                    # TODO: Order ID needs to be checked earlier, before Order is created
+                    _order_id_exists = int(order_value[0]) in Order.order_id_set
+
+                    print(
+                        f"_order_id_exists (before Order creation): {_order_id_exists}"
                     )
 
                     _position_number += 1
                     _order_id = int(order_value[0])
-                    _positions = position_cache.get_positions(order_value[0])
-                    _customer = customer_cache.get_customer(order_value[1])
-                    _order_state = self._str_state_to_order_state(order_value[2])
+                    _positions = position_cache.get_positions(
+                        int(order_value[0]),
+                    )
+                    _customer = customer_cache.get_customer(int(order_value[1]))
+                    _order_state = order_value[2]
 
                     print(
                         f"_positions: {_positions}, "
@@ -347,9 +357,6 @@ class OrderCache:
                         state=_order_state,
                         order_id=_order_id,
                     )
-
-                    # TODO: Order ID needs to be checked earlier, before Order is created
-                    _order_id_exists = int(_order.order_id) in Order.order_id_set
 
                     print(
                         f"_order_id_exists: {_order_id_exists}, "
@@ -406,7 +413,7 @@ class OrderCache:
         _order_values = []
         for _listed_order in order_string_list:
             _prep_order = str.split(_listed_order, sep=";")
-            _order_state = self._str_state_to_order_state(_prep_order[2])
+            _order_state = self._convert_str_to_orderstate(_prep_order[2])
             _prep_order[2] = _order_state
             if isinstance(_prep_order, list):
                 _order_values.append(_prep_order)
@@ -415,10 +422,15 @@ class OrderCache:
 
         return _order_values
 
-    def _str_state_to_order_state(self, input_str: str):
-        _str_state = input_str
+    def _convert_str_to_orderstate(
+        self,
+        order_state_str: str,
+    ) -> OrderState | None:
+        _order_state_str = order_state_str
+
+        print(f"_order_str_state: {_order_state_str}")
         try:
-            match _str_state:
+            match _order_state_str:
                 case "Offen":
                     _order_state = OrderState.OPENED
                 case "Pausiert":
@@ -436,10 +448,10 @@ class OrderCache:
 
             return _order_state
 
-        except OrderStateException as exc:
+        except OrderStateException:
             print(
                 "Caught an OrderStateException: Order state "
-                f"read from csv is invalid: {exc}"
+                f"read from csv is invalid: {_order_state_str}"
             )
             return None
 
@@ -452,6 +464,7 @@ class OrderCache:
         _position_values = position_values
         _order_positions = []
         for pos in _position_values:
+            # TODO: Whats up here?
             if pos in position_cache.position_cache:
                 _position = Position(
                     item_cache.get_item(int(pos[1])),
@@ -471,29 +484,32 @@ class OrderCache:
                 return _order
             return None
 
-    def add_order_to_cache(self, order: Order):
+    def add_order_to_cache(self, order: Order) -> None:
         """Method to add an order object to the order cache"""
         self._order_cache.add(order)
 
-    def remove_order_from_cache(self, order: Order):
+    def remove_order_from_cache(self, order: Order) -> None:
         """Method to remove an order object from the order cache"""
         self._order_cache.remove(order)
 
-    def update_cached_order(self, old: Order, new: Order):
+    def update_cached_order(self, old: Order, new: Order) -> None:
         """Method to update an order object residing inside the order cache"""
         self._order_cache.remove(old)
         self._order_cache.add(new)
 
-    def print_order_db(self):
+    def print_order_db(self) -> None:
         """
         Method used to print the content of the order cache to the console
         """
 
         _order_tuple = tuple[Order](self._order_cache)
-        _order_list = sorted(_order_tuple, key=lambda o: o.order_id)
+        print(f"_order_tuple: {_order_tuple}")
+
+        _sorted_order_list = sorted(_order_tuple, key=lambda o: o.order_id)
+        print(f"_order_list: {_sorted_order_list}")
 
         print("")
-        for _order in _order_list:
+        for _order in _sorted_order_list:
             print("        ", _order, sep="")
 
     def __iter__(self):
@@ -574,22 +590,30 @@ def order_processing_menu_loop(
     _order_processing = True
     while _order_processing is True:
         print(_menu_string)
-        _menu_item = input("        Bitte wählen sie den gewünschten Menüpunkt: ")
+        _menu_item = input(
+            "        Bitte wählen sie den gewünschten Menüpunkt: ",
+        )
 
         if _menu_item == "1":
             _customer_string = input("        Kundenname:")
-            _customer_id = customer_cache.find_customer_id(company=_customer_string)
+            _customer_id = customer_cache.find_customer_id(
+                company=_customer_string,
+            )
             _customer = customer_cache.get_customer(_customer_id)
             if _customer is None:
                 continue
 
             _temp_order = Order(_customer, [])
             _temp_order_id = _temp_order.order_id
+            _temp_order.positions = get_order_positions(
+                item_cache,
+                _temp_order_id,
+            )
 
-            _positions = get_order_positions(item_cache, _temp_order_id)
-
-            if _positions is None:
-                print("        Fehler: Positionen konnten nicht erstellt werden")
+            if _temp_order.positions is None:
+                print(
+                    "        Fehler: Positionen konnten nicht erstellt werden",
+                )
             else:
                 if _customer:
 
@@ -611,6 +635,7 @@ def order_processing_menu_loop(
             if _unmodified_order is None:
                 pass
             else:
+                # TODO: Fix function parameters
                 _new_positions = get_order_positions(item_cache)
 
                 if _new_positions is None:
@@ -652,12 +677,13 @@ def order_processing_menu_loop(
             printer.Printer.clear_cli()
 
 
-def get_order_positions(item_cache: ItemCache, order_id: int):
+def get_order_positions(item_cache: ItemCache, order_id: int) -> list[Position]:
     """Function to build the positions object when creating an order"""
-    _order_id = order_id
-    _adding_positions = True
-    _position_value_str_int = []
-    _positions = []
+    _order_id: int = order_id
+    _order_number_counter: int = 1
+    _adding_positions: bool = True
+    _position_value_str_int: list[(str, int, int)] = []
+    _positions: list[Position] = []
     while _adding_positions:
         _count = None
         _position_valid = True
@@ -680,10 +706,15 @@ def get_order_positions(item_cache: ItemCache, order_id: int):
             continue
 
         if _item_name_or_number_str != "" and _position_valid:
-            _position_value_str_int.append([_item_name_or_number_str, _count])
+            _position_value_str_int.append(
+                [_item_name_or_number_str, _count, _order_number_counter],
+            )
         else:
-            print("        Position lässt sich aus den Angaben nicht erzeugen!")
+            print(
+                "        Position lässt sich aus den Angaben nicht erzeugen!",
+            )
             continue
+        _order_number_counter += 1
 
     for _position_value in _position_value_str_int:
         try:
@@ -695,9 +726,11 @@ def get_order_positions(item_cache: ItemCache, order_id: int):
             item = item_cache.get_item(item_number)
 
         if item is not None:
+            print(f"Item data: {_position_value}")
             position = Position(
                 item_cache.get_item(int(_position_value[0])),
                 _position_value[1],
+                _position_value[2],
                 _order_id,
             )
 

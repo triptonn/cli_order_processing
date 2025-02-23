@@ -392,17 +392,18 @@ class Order:
         self.customer_id = customer
         self._positions = positions
 
-        for position in self._positions:
+        # TODO: Discount needs to be implemented
+
+        """ for position in self._positions:
             assert isinstance(position, Position)
             self._total_before_discount += position.line_total
 
         self._total_before_discount = round(self._total_before_discount, 2)
 
-        # TODO: Discount needs to be implemented
         if self._total_before_discount >= self.default_quantity_discount_qualifier:
             self.total = self._total_before_discount * self.default_quantity_discount
         else:
-            self.total = self._total_before_discount
+            self.total = self._total_before_discount """
 
     def save_order_to_csv(self):
         """Method used to save order information to csv file"""
@@ -488,10 +489,12 @@ class Order:
             os.remove("./Datenbanken/orders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
 
-    def next_available_id(self):
+    def next_available_id(self) -> int:
         """Returns smallest available order id"""
-        # TODO: Implement next available order id method in Order class
-        return 1
+
+        _diff = set(range(len(self.order_id_set))).difference(self.order_id_set)
+        _min = min(_diff)
+        return int(_min)
 
     def __repr__(self):
         return repr(
