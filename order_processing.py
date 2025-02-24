@@ -8,6 +8,12 @@ import printer
 from customer_repository import Customer
 from order_repository import Item, Order, OrderState, Position
 
+##############################################################################
+#
+# Order Processing
+#
+##############################################################################
+
 
 class ItemCache:
     """Cache to hold Item objects
@@ -116,6 +122,97 @@ class ItemCache:
 
     def __str__(self):
         return f"        {self._item_cache}"
+
+
+def item_management_menu_loop(item_cache: ItemCache):
+    """Function running the menu loop of the item management feature"""
+
+    _menu_string = """
+        ##########################################################################################################
+
+        Warenverwaltung
+
+        Menü:                                                                          'c' um Bildschirm zu räumen
+        1. Ware anlegen
+        2. Ware bearbeiten
+        3. Ware löschen
+        4. Warenliste ausgeben
+        5. Zurück zur Auftragsbearbeitung
+
+        ##########################################################################################################
+    """
+
+    _item_management = True
+    while _item_management is True:
+        print(_menu_string)
+        _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt: ")
+        if _menu_item == "1":
+            _name = input("        Bitte geben sie den Namen der Ware ein: ")
+            _unit_price = input("        Bitte geben sie den Stückpreis der Ware ein: ")
+            _item = Item(item_name=_name, unit_price=_unit_price)
+            _item.save_item_to_csv()
+            item_cache.add_item_to_cache(_item)
+
+        elif _menu_item == "2":
+            _item_number = input(
+                "        Bitte geben sie die Artikelnummer des Artikels an: "
+            )
+            _old_item = item_cache.get_item(int(_item_number))
+            print(f"        Bisheriger Stückpreis: {_old_item.unit_price}")
+            _new_unit_price = input(
+                "        Bitte geben sie den neuen Stückpreis ein: "
+            )
+            _new_item = Item(
+                _old_item.item_name, _new_unit_price, _old_item.item_number
+            )
+            item_cache.update_cached_item(_old_item, _new_item)
+            print("        Artikel wurde aktualisiert!")
+
+        elif _menu_item == "3":
+            _item_number = input(
+                "        Bitte geben sie die Artikelnummer des zu "
+                "löschenden Artikels ein: "
+            )
+            _item = item_cache.get_item(int(_item_number))
+            _item.delete_item_form_csv()
+            item_cache.remove_item_from_cache(_item)
+            print("        Artikel wurde erfolgreich aus dem System gelöscht!")
+
+        elif _menu_item == "4":
+            item_cache.print_item_cache()
+
+        elif _menu_item == "5":
+            _item_management = False
+
+        elif _menu_item == "c":
+            printer.Printer.clear_cli()
+
+
+class ItemCacheException(Exception):
+    """A base class for ItemCache exceptions"""
+
+
+class ItemNumberException(ItemCacheException):
+    """Exception to catch invalid item numbers"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
+class ItemNotFoundException(ItemCacheException):
+    """Exception catching situations where no matching item object is found"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
+##############################################################################
+#
+# Order Processing
+#
+##############################################################################
 
 
 class PositionCache:
@@ -297,7 +394,7 @@ class OrderCache:
     _order_cache : set(Order)
     """
 
-    _order_cache = set()
+    _order_cache: set[Order] = set()
 
     def __init__(
         self,
@@ -413,7 +510,7 @@ class OrderCache:
         _order_values = []
         for _listed_order in order_string_list:
             _prep_order = str.split(_listed_order, sep=";")
-            _order_state = self._convert_str_to_orderstate(_prep_order[2])
+            _order_state = self.convert_str_to_orderstate(_prep_order[2])
             _prep_order[2] = _order_state
             if isinstance(_prep_order, list):
                 _order_values.append(_prep_order)
@@ -422,7 +519,7 @@ class OrderCache:
 
         return _order_values
 
-    def _convert_str_to_orderstate(
+    def convert_str_to_orderstate(
         self,
         order_state_str: str,
     ) -> OrderState | None:
@@ -455,7 +552,7 @@ class OrderCache:
             )
             return None
 
-    def _rebuild_order_positions(
+    """ def _rebuild_order_positions(
         self,
         item_cache: ItemCache,
         position_cache: PositionCache,
@@ -473,15 +570,34 @@ class OrderCache:
                 )
                 _order_positions.append(_position)
 
-        return _order_positions
+        return _order_positions """
 
-    def get_order(self, order_id: int):
-        """Method used to get the order object by its order id"""
+    def get_order(self, order_id: int) -> Order | None:
+        """
+        Finds Order object for provided order id in
+        the OrderCache and returns it.
 
-        for _order in self._order_cache:
-            assert isinstance(_order, Order)
-            if _order.order_id == order_id:
-                return _order
+        Parameters
+        ----------
+        order_id : [int]
+
+        Returns
+        -------
+        result : [Order] | [None]
+        """
+        try:
+            for _order in self._order_cache:
+                if isinstance(_order, Order):
+                    if _order.order_id == order_id:
+                        return _order
+                    raise OrderCacheTypeException
+                return None
+        except OrderCacheTypeException:
+            print(
+                "Caught AssertionError while verifying objects in "
+                "OrderCache are Order objects: order id: "
+                f"{order_id}, {type(order_id)}"
+            )
             return None
 
     def add_order_to_cache(self, order: Order) -> None:
@@ -520,27 +636,11 @@ class OrderCache:
         return f"        {self._order_cache}"
 
 
-class OrderDBException(Exception):
-    """A base class for OderDBExceptions"""
+class OrderCacheException(Exception):
+    """A base class for OrderCache exceptions"""
 
 
-class ItemNumberException(OrderDBException):
-    """Exception to catch invalid item numbers"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args)
-        self.custom_kwarg = kwargs.get("custom_kwarg")
-
-
-class ItemNotFoundException(OrderDBException):
-    """Exception catching situations where no matching item object is found"""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args)
-        self.custom_kwarg = kwargs.get("custom_kwarg")
-
-
-class OrderIDException(OrderDBException):
+class OrderIDException(OrderCacheException):
     """Exception catching invalid order id"""
 
     def __init__(self, *args, **kwargs):
@@ -548,7 +648,7 @@ class OrderIDException(OrderDBException):
         self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
-class OrderStateException(OrderDBException):
+class OrderStateException(OrderCacheException):
     """Exception catching invalid order state"""
 
     def __init__(self, *args, **kwargs):
@@ -556,7 +656,15 @@ class OrderStateException(OrderDBException):
         self.custom_kwarg = kwargs.get("custom_kwarg")
 
 
-class StringToOrderConversionException(OrderDBException):
+class OrderCacheTypeException(OrderCacheException):
+    """Exception catching wrong types in the OrderCache"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
+class StringToOrderConversionException(OrderCacheException):
     """Exception catching exceptions while converting strings to Order objects"""
 
     def __init__(self, *args, **kwargs):
@@ -606,6 +714,7 @@ def order_processing_menu_loop(
 
         elif _menu_item == "2":
             result: bool = modify_order(
+                item_cache,
                 position_cache,
                 order_cache,
             )
@@ -667,7 +776,7 @@ def create_order(
 
     if isinstance(_order, Order):
         _order.save_order_to_csv()
-        order_cache.add_order_to_cache(_order)
+        order_cache.add(_order)
         print("        Auftrag erfolgreich erstellt")
         return True
 
@@ -681,38 +790,86 @@ def modify_order(
     order_cache: OrderCache,
 ) -> bool:
     """
-    Manages modifying an Order object
+    Manages modifying an Order object and returns the result
+    as a boolean value.
 
+    Parameters
+    ----------
+    item_cache : ItemCache
 
+    position_cache : PositionCache
+
+    order_cache : OrderCache
+
+    Returns
+    -------
+    bool
     """
     _local_item_number = input(
         "        Bitte geben sie die "
-        "Auftragsnummer des zu bearbeitenden Auftrags ein:"
+        "Auftragsnummer des zu bearbeitenden Auftrags ein: "
     )
-
     _unmodified_order = order_cache.get_order(int(_local_item_number))
 
-    if _unmodified_order is None:
-        pass
-    else:
-        # TODO: How to handle the modification of the order positions?
+    print(f"_unmodified_order: {_unmodified_order}")
+
+    _new_positions = None
+
+    _modify_positions = (
+        input("        Do you need to modify order positions? (Y/n) ") == "Y"
+    )
+    _modify_state = (
+        input("        Do you need to modify the order state? (Y/n) ") == "Y"
+    )
+
+    if (
+        _modify_positions is False and _modify_state is False
+    ) or _unmodified_order is None:
+        print(
+            "        Entered order id is not valid or there seems to be nothing to change."
+        )
+        return False
+
+    if _modify_state is True:
+        _new_state_str = input(
+            "        (Offen, InArbeit, Versandt, Bezahlt, Pausiert, Geschlossen)\n"
+            "        Please enter the updated order state: "
+        )
+        _new_order_state = order_cache.convert_str_to_orderstate(_new_state_str)
+        if _new_order_state is None:
+            return False
+        _unmodified_order.order_state = _new_order_state
+
+    if _modify_positions is True:
         _new_positions = get_order_positions(
             item_cache,
             _unmodified_order.order_id,
         )
 
-        if _new_positions is None:
-            print("        Fehler: Positionen konnten nicht erzeugt werden")
+        if _new_positions is None or _new_positions == []:
+            print("        Fehler: Neue Positionen konnten nicht erzeugt werden")
             return False
-        _new_order = Order(
-            customer=_unmodified_order.customer_id,
-            positions=_new_positions,
-            order_id=_unmodified_order.order_id,
-            state=_unmodified_order.state,
+
+        remove_old_positions_from_position_cache(
+            position_cache,
+            _unmodified_order.positions,
         )
-        order_cache.update_cached_order(_unmodified_order, _new_order)
-        _unmodified_order.delete_order_in_csv()
-        _new_order.save_order_to_csv()
+
+    _new_order = Order(
+        customer=_unmodified_order.customer_id,
+        positions=(
+            _new_positions if _modify_positions is True else _unmodified_order.positions
+        ),
+        order_id=_unmodified_order.order_id,
+        state=(
+            _new_order_state if _modify_state is True else _unmodified_order.order_state
+        ),
+    )
+
+    order_cache.update_cached_order(_unmodified_order, _new_order)
+    _unmodified_order.delete_order_in_csv()
+    _new_order.save_order_to_csv()
+
     return True
 
 
@@ -723,7 +880,15 @@ def get_order_positions(
     """
     Function to build the positions object when creating an order
 
+    Parameters
+    ----------
+    item_cache : [ItemCache]
 
+    order_id : [int]
+
+    Returns
+    -------
+    positions : [list][[Position]] | [None]
     """
     _order_id: int = order_id
     _adding_positions: bool = True
@@ -753,7 +918,9 @@ def get_order_positions(
             item_name = _item_str
             item_number = item_cache.find_item_number(item_name)
             if item_number is None:
-                print(f"Item {_position_number_counter} is not valid... try again...")
+                print(
+                    f"Item {_position_number_counter} is not valid... try again...",
+                )
                 continue
 
         _item: Item | None = item_cache.get_item(item_number)
@@ -798,6 +965,30 @@ def get_order_positions(
     return _positions
 
 
+def remove_old_positions_from_position_cache(
+    position_cache: PositionCache,
+    old_positions: list[Position],
+) -> None:
+    """
+    Removes the old Position objects of a modified order
+    from the position cache.
+
+    Parameters
+    ----------
+    position_cache : [PositionCache]
+
+    old_positions : [list][[Position]]
+    """
+    try:
+        for pos in old_positions:
+            pos.delete_position_in_csv()
+            position_cache.remove_position_from_cache(pos)
+    except Exception:
+        print(
+            "Caught Exception while removing old Position objects from the position cache"
+        )
+
+
 def get_item_name_or_number() -> str:
     """
     Asks user for input of an item name or item number for this position -> str
@@ -820,67 +1011,3 @@ def get_item_count() -> int | None:
     except ValueError:
         print("Value is not a valid integer... try again...")
         return None
-
-
-def item_management_menu_loop(item_cache: ItemCache):
-    """Function running the menu loop of the item management feature"""
-
-    _menu_string = """
-        ##########################################################################################################
-
-        Warenverwaltung
-
-        Menü:                                                                          'c' um Bildschirm zu räumen
-        1. Ware anlegen
-        2. Ware bearbeiten
-        3. Ware löschen
-        4. Warenliste ausgeben
-        5. Zurück zur Auftragsbearbeitung
-
-        ##########################################################################################################
-    """
-
-    _item_management = True
-    while _item_management is True:
-        print(_menu_string)
-        _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt: ")
-        if _menu_item == "1":
-            _name = input("        Bitte geben sie den Namen der Ware ein: ")
-            _unit_price = input("        Bitte geben sie den Stückpreis der Ware ein: ")
-            _item = Item(item_name=_name, unit_price=_unit_price)
-            _item.save_item_to_csv()
-            item_cache.add_item_to_cache(_item)
-
-        elif _menu_item == "2":
-            _item_number = input(
-                "        Bitte geben sie die Artikelnummer des Artikels an: "
-            )
-            _old_item = item_cache.get_item(int(_item_number))
-            print(f"        Bisheriger Stückpreis: {_old_item.unit_price}")
-            _new_unit_price = input(
-                "        Bitte geben sie den neuen Stückpreis ein: "
-            )
-            _new_item = Item(
-                _old_item.item_name, _new_unit_price, _old_item.item_number
-            )
-            item_cache.update_cached_item(_old_item, _new_item)
-            print("        Artikel wurde aktualisiert!")
-
-        elif _menu_item == "3":
-            _item_number = input(
-                "        Bitte geben sie die Artikelnummer des zu "
-                "löschenden Artikels ein: "
-            )
-            _item = item_cache.get_item(int(_item_number))
-            _item.delete_item_form_csv()
-            item_cache.remove_item_from_cache(_item)
-            print("        Artikel wurde erfolgreich aus dem System gelöscht!")
-
-        elif _menu_item == "4":
-            item_cache.print_item_cache()
-
-        elif _menu_item == "5":
-            _item_management = False
-
-        elif _menu_item == "c":
-            printer.Printer.clear_cli()
