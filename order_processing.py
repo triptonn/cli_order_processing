@@ -8,12 +8,6 @@ import printer
 from customer_repository import Customer
 from order_repository import Item, Order, OrderState, Position
 
-##############################################################################
-#
-# Order Processing
-#
-##############################################################################
-
 
 class ItemCache:
     """Cache to hold Item objects
@@ -560,18 +554,23 @@ class OrderCache:
                 if isinstance(_order, Order):
                     if _order.order_id == order_id:
                         return _order
-
-                raise OrderCacheTypeException(
-                    **{"order_id": f"{order_id}", "order": type(_order)}
-                )
+                else:
+                    raise OrderCacheTypeException(
+                        **{
+                            "order_id": f"{order_id}",
+                            "caught_object": f"{_order}",
+                            "object_type": f"{type(_order)}",
+                        }
+                    )
 
         except OrderCacheTypeException as exc:
             print(
-                "Caught OrderCacheTypeException while verifying objects in "
-                "OrderCache are Order objects: order id: "
-                f"{order_id}, {exc.args}"
+                f"Caught OrderCacheTypeException in order {exc.order_id}: "
+                f"{exc.caught_object} ({exc.object_type}) is not a valid "
+                "OrderCache type"
             )
-            return None
+
+        return None
 
     def add_order_to_cache(self, order: Order) -> None:
         """Method to add an order object to the order cache"""
@@ -634,7 +633,9 @@ class OrderCacheTypeException(OrderCacheException):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
-        self.custom_kwarg = kwargs.get("custom_kwarg")
+        self.order_id = kwargs.get("order_id")
+        self.caught_object = kwargs.get("caught_object")
+        self.object_type = kwargs.get("object_type")
 
 
 class StringToOrderConversionException(OrderCacheException):
@@ -702,6 +703,9 @@ def order_processing_menu_loop(
                 pass
             else:
                 assert isinstance(_order_to_delete, Order)
+                for pos in _order_to_delete.positions:
+                    position_cache.remove_position_from_cache(pos)
+                    pos.delete_position_in_csv()
                 order_cache.remove_order_from_cache(_order_to_delete)
                 _order_to_delete.delete_order_in_csv()
 
@@ -782,11 +786,15 @@ def modify_order(
         "        Bitte geben sie die "
         "Auftragsnummer des zu bearbeitenden Auftrags ein: "
     )
-    _unmodified_order = order_cache.get_order(int(_local_item_number))
+    print(
+        f"entry: {_local_item_number}, intified: {int(_local_item_number), type(int(_local_item_number))}"
+    )
+    _old_order = order_cache.get_order(int(_local_item_number))
 
-    print(f"_unmodified_order: {_unmodified_order}")
+    print(f"_unmodified_order: {_old_order}")
 
     _new_positions = None
+    _new_order_state = None
 
     _modify_positions = (
         input("        Do you need to modify order positions? (Y/n) ") == "Y"
@@ -795,9 +803,7 @@ def modify_order(
         input("        Do you need to modify the order state? (Y/n) ") == "Y"
     )
 
-    if (
-        _modify_positions is False and _modify_state is False
-    ) or _unmodified_order is None:
+    if (_modify_positions is False and _modify_state is False) or _old_order is None:
         print(
             "        Entered order id is not valid or there seems to be nothing to change."
         )
@@ -811,36 +817,44 @@ def modify_order(
         _new_order_state = order_cache.convert_str_to_orderstate(_new_state_str)
         if _new_order_state is None:
             return False
-        _unmodified_order.order_state = _new_order_state
 
     if _modify_positions is True:
         _new_positions = get_order_positions(
             item_cache,
-            _unmodified_order.order_id,
+            _old_order.order_id,
         )
 
         if _new_positions is None or _new_positions == []:
             print("        Fehler: Neue Positionen konnten nicht erzeugt werden")
             return False
 
+        _isfinal: bool = (
+            input(
+                "        Do you really want to overwrite the exisiting order positions? (Y/n): "
+            )
+            == "Y"
+        )
+        if not _isfinal:
+            return False
+
         remove_old_positions_from_position_cache(
             position_cache,
-            _unmodified_order.positions,
+            _old_order.positions,
         )
 
     _new_order = Order(
-        customer=_unmodified_order.customer_id,
+        customer=_old_order.customer,
         positions=(
-            _new_positions if _modify_positions is True else _unmodified_order.positions
+            _new_positions if _modify_positions is True else _old_order.positions
         ),
-        order_id=_unmodified_order.order_id,
-        state=(
-            _new_order_state if _modify_state is True else _unmodified_order.order_state
-        ),
+        order_id=_old_order.order_id,
+        state=(_new_order_state if _modify_state is True else _old_order.order_state),
+        modify=True,
+        has_new_pos=(_modify_positions is True),
     )
 
-    order_cache.update_cached_order(_unmodified_order, _new_order)
-    _unmodified_order.delete_order_in_csv()
+    order_cache.update_cached_order(_old_order, _new_order)
+    _old_order.delete_order_in_csv()
     _new_order.save_order_to_csv()
 
     return True

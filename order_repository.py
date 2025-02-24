@@ -367,11 +367,21 @@ class Order:
         self,
         customer: Customer,
         positions: list[Position],
+        *,
         order_id: int = 0,
         state: OrderState = OrderState.OPENED,
+        modify: bool = False,
+        has_new_pos: bool = False,
     ):
+        if modify:
+            Order.order_id_set.remove(order_id)
+            if has_new_pos:
+                self.positions = None
+            else:
+                self.positions = positions
 
         self.state = state
+        self.customer = customer
 
         if order_id == 0:
             Order._order_id_counter += 1
@@ -379,31 +389,21 @@ class Order:
             Order.order_id_set.add(Order._order_id_counter)
         else:
             _order_id = int(order_id)
-
-            if not Order.order_id_set.__contains__(_order_id):
+            try:
+                if Order.order_id_set.__contains__(_order_id):
+                    raise OrderIdException({"order_id": _order_id})
                 Order.order_id_set.add(_order_id)
                 Order._order_id_counter = max(
                     Order._order_id_counter,
                     _order_id,
                 )
+                self.order_id = _order_id
 
-            self.order_id = _order_id
-
-        self.customer_id = customer
-        self.positions = positions
-
-        # TODO: Discount needs to be implemented
-
-        """ for position in self._positions:
-            assert isinstance(position, Position)
-            self._total_before_discount += position.line_total
-
-        self._total_before_discount = round(self._total_before_discount, 2)
-
-        if self._total_before_discount >= self.default_quantity_discount_qualifier:
-            self.total = self._total_before_discount * self.default_quantity_discount
-        else:
-            self.total = self._total_before_discount """
+            except OrderIdException as exc:
+                print(
+                    f"Caught OrderIdException for order "
+                    f"{exc.caught_order_id}. Id already taken!"
+                )
 
     def save_order_to_csv(self):
         """Method used to save order information to csv file"""
@@ -413,7 +413,10 @@ class Order:
 
         if _exists:
             with open(_orders_csv, "a", encoding="UTF-8") as file:
-                file.write(f"{self.order_id};{self.customer_id};{self.state.value}\n")
+                print(
+                    f"string to be saved to csv: '{self.order_id};{self.customer};{self.state.value}'"
+                )
+                file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
         else:
             _directory = Path("./Datenbanken/")
             _directory_exists = _directory.exists()
@@ -422,7 +425,7 @@ class Order:
 
             with open(_orders_csv, "w", encoding="UTF-8") as file:
                 file.write("order_id;customer_id;state\n")
-                file.write(f"{self.order_id};{self.customer_id};{self.state.value}\n")
+                file.write(f"{self.order_id};{self.customer};{self.state.value}\n")
 
     def update_order_in_csv(
         self,
@@ -442,29 +445,26 @@ class Order:
         assert isinstance(self.state, OrderState)
         assert isinstance(self.positions, List[Position])
 
-        self._total_before_discount = 0.00
-        for position in self.positions:
-            assert isinstance(position, Position)
-            self._total_before_discount += position.line_total
-
         _orders_csv = Path("./Datenbanken/orders.csv")
         _temp_orders_csv = Path("./Datenbanken/orders_temp.csv")
         _exists = _orders_csv.exists()
         if _exists:
-            with open(_orders_csv, "r", encoding="UTF-8") as input_file:
-                with open(_temp_orders_csv, "w", encoding="UTF-8") as output_file:
-                    lines = input_file.readlines()
-                    for line in lines:
-                        if line.strip("\n") != (
-                            f"{self.order_id};{self.customer_id};{self.state.value}"
-                        ):
-                            output_file.write(line)
-                        else:
-                            output_file.write(
-                                f"{self.order_id};"
-                                f"{self.customer_id};"
-                                f"{self.state.value}\n"
-                            )
+            with (
+                open(_orders_csv, "r", encoding="UTF-8") as input_file,
+                open(_temp_orders_csv, "w", encoding="UTF-8") as output_file,
+            ):
+                lines = input_file.readlines()
+                for line in lines:
+                    if line.strip("\n") != (
+                        f"{self.order_id};{self.customer};{self.state.value}"
+                    ):
+                        output_file.write(line)
+                    else:
+                        output_file.write(
+                            f"{self.order_id};"
+                            f"{self.customer};"
+                            f"{self.state.value}\n"
+                        )
 
             os.remove("./Datenbanken/oders.csv")
             _temp_orders_csv.rename("./Datenbanken/orders.csv")
@@ -483,7 +483,7 @@ class Order:
                 lines = input_csv_file.readlines()
                 for line in lines:
                     if line.strip("\n") != (
-                        f"{self.order_id};{self.customer_id};{self.state.value}"
+                        f"{self.order_id};{self.customer};{self.state.value}"
                     ):
                         output_csv_file.write(line)
             os.remove("./Datenbanken/orders.csv")
@@ -499,10 +499,22 @@ class Order:
         return repr(
             (
                 self.order_id,
-                self.customer_id,
+                self.customer,
                 self.state,
             )
         )
 
     def __str__(self):
-        return f"{self.order_id};{self.customer_id};{self.state.value}"
+        return f"{self.order_id};{self.customer};{self.state.value}"
+
+
+class OrderException(Exception):
+    """Wrapper for OrderExceptions"""
+
+
+class OrderIdException(OrderException):
+    """Exception catching invalid order id's"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.caught_order_id = kwargs.get("order_id")
