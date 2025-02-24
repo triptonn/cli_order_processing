@@ -217,7 +217,7 @@ class ItemNotFoundException(ItemCacheException):
 
 class PositionCache:
     """
-    Class for caching position objects
+    Caches Position objects read from a file.
 
     Parameters
     ----------
@@ -269,7 +269,7 @@ class PositionCache:
         """
         Gets all positions of an order provided the order id
 
-        Paramaters
+        Parameters
         ----------
         order_id : int
 
@@ -408,78 +408,55 @@ class OrderCache:
 
         _path = Path("./Datenbanken/orders.csv")
         _order_csv_exists = _path.exists()
-        if _order_csv_exists:
-            try:
-                lines = self._read_csv(_path)
-                _prep_order_str_list = self._remove_eol_from_str_list(lines)
-                _order_value_list = self._convert_str_to_order_values(
-                    _prep_order_str_list,
+
+        if not _order_csv_exists:
+            pass
+        try:
+            lines = self._read_csv(_path)
+            _prep_order_str_list = self._remove_eol_from_str_list(lines)
+            _order_value_list = self._convert_str_to_order_values(
+                _prep_order_str_list,
+            )
+
+            _position_number = 0
+            for order_value in _order_value_list:
+                _order_id_exists = int(order_value[0]) in Order.order_id_set
+
+                _position_number += 1
+                _order_id = int(order_value[0])
+                _positions = position_cache.get_positions(
+                    int(order_value[0]),
+                )
+                _customer = customer_cache.get_customer(int(order_value[1]))
+                _order_state = order_value[2]
+
+                _order = Order(
+                    customer=_customer,
+                    positions=_positions,
+                    state=_order_state,
+                    order_id=_order_id,
                 )
 
-                # TODO: Loop through list of order values, generate order positions and build the list of order positions
-                print(f"_order_values: {_order_value_list}")
-
-                _position_number = 0
-                for order_value in _order_value_list:
-                    print(
-                        f"order id: {order_value[0]};"
-                        f"customer: {order_value[1]};"
-                        f"order state: {order_value[2]}"
+                if not _order_id_exists:
+                    self._order_cache.add(_order)
+                else:
+                    raise OrderIDException(
+                        str(_order), "Order ID ist bereits vergeben!"
                     )
 
-                    # TODO: Order ID needs to be checked earlier, before Order is created
-                    _order_id_exists = int(order_value[0]) in Order.order_id_set
+        except OrderIDException as exc:
+            print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
 
-                    print(
-                        f"_order_id_exists (before Order creation): {_order_id_exists}"
-                    )
-
-                    _position_number += 1
-                    _order_id = int(order_value[0])
-                    _positions = position_cache.get_positions(
-                        int(order_value[0]),
-                    )
-                    _customer = customer_cache.get_customer(int(order_value[1]))
-                    _order_state = order_value[2]
-
-                    print(
-                        f"_positions: {_positions}, "
-                        f"_customer: {_customer}, "
-                        f"_order_state: {_order_state}"
-                    )
-
-                    _order = Order(
-                        customer=_customer,
-                        positions=_positions,
-                        state=_order_state,
-                        order_id=_order_id,
-                    )
-
-                    print(
-                        f"_order_id_exists: {_order_id_exists}, "
-                        f"{_order.order_id} in {Order.order_id_set}"
-                    )
-
-                    if not _order_id_exists:
-                        self._order_cache.add(_order)
-                    else:
-                        raise OrderIDException(
-                            str(_order), "Order ID ist bereits vergeben!"
-                        )
-
-            except OrderIDException as exc:
-                print(f"Caught OrderIDException with custom_kwarg={exc.custom_kwarg}")
-
-            except AssertionError as err:
-                print(
-                    "Caught AssertionError during order cache "
-                    f"initialization: {err, err.__traceback__.tb_lineno}"
-                )
-            except IndexError as err:
-                print(
-                    "Caught IndexError during order cache "
-                    f"initialization: {err, err.__traceback__.tb_lineno}"
-                )
+        except AssertionError as err:
+            print(
+                "Caught AssertionError during order cache "
+                f"initialization: {err, err.__traceback__.tb_lineno}"
+            )
+        except IndexError as err:
+            print(
+                "Caught IndexError during order cache "
+                f"initialization: {err, err.__traceback__.tb_lineno}"
+            )
 
     def find_order(self, customer: str = ""):
         """Method to find a order by the customer name"""
@@ -523,6 +500,19 @@ class OrderCache:
         self,
         order_state_str: str,
     ) -> OrderState | None:
+        """
+        Receives str value and returns the relevant
+        order state. If no order state can be matched
+        None is returned
+
+        Parameters
+        ----------
+        order_state_str : [str]
+
+        Returns
+        -------
+        result : [OrderState] | [None]
+        """
         _order_state_str = order_state_str
 
         print(f"_order_str_state: {_order_state_str}")
@@ -552,26 +542,6 @@ class OrderCache:
             )
             return None
 
-    """ def _rebuild_order_positions(
-        self,
-        item_cache: ItemCache,
-        position_cache: PositionCache,
-        position_values: list,
-    ):
-        _position_values = position_values
-        _order_positions = []
-        for pos in _position_values:
-            # TODO: Whats up here?
-            if pos in position_cache.position_cache:
-                _position = Position(
-                    item_cache.get_item(int(pos[1])),
-                    int(pos[2]),
-                    int(pos[0]),
-                )
-                _order_positions.append(_position)
-
-        return _order_positions """
-
     def get_order(self, order_id: int) -> Order | None:
         """
         Finds Order object for provided order id in
@@ -590,13 +560,16 @@ class OrderCache:
                 if isinstance(_order, Order):
                     if _order.order_id == order_id:
                         return _order
-                    raise OrderCacheTypeException
-                return None
-        except OrderCacheTypeException:
+
+                raise OrderCacheTypeException(
+                    **{"order_id": f"{order_id}", "order": type(_order)}
+                )
+
+        except OrderCacheTypeException as exc:
             print(
-                "Caught AssertionError while verifying objects in "
+                "Caught OrderCacheTypeException while verifying objects in "
                 "OrderCache are Order objects: order id: "
-                f"{order_id}, {type(order_id)}"
+                f"{order_id}, {exc.args}"
             )
             return None
 

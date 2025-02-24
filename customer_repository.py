@@ -41,7 +41,7 @@ class Customer:
         postcode: str,
         city: str,
         customer_id: int = 0,
-    ):
+    ) -> None:
         self.customer_id = customer_id
 
         if customer_id == 0:
@@ -52,8 +52,10 @@ class Customer:
             _customer_id = customer_id
             if not Customer.customer_id_set.__contains__(_customer_id):
                 Customer.customer_id_set.add(_customer_id)
-                if Customer._customer_id_counter < _customer_id:
-                    Customer._customer_id_counter = _customer_id
+                Customer._customer_id_counter = max(
+                    customer_id,
+                    Customer._customer_id_counter,
+                )
             self.customer_id = _customer_id
 
         self.lastname = lastname
