@@ -345,15 +345,15 @@ class Order:
 
     Attributes
     ----------
-    order_id : int
-        order id (automatically assign when first generated,
-        in other cases read from file / db)
-    customer : Customer
-        Customer object
-    positions : list
-        list of Position objects
-    state : OrderState
-        OrderState object
+    order_id : [int]
+        Order id (automatically assign when first generated,
+        in other cases read from file / db).
+    customer : [Customer]
+        Customer object.
+    positions : [list][[Position]]
+        List of Position objects.
+    state : [OrderState]
+        OrderState object.
     """
 
     order_id_set = set()
@@ -371,15 +371,13 @@ class Order:
         order_id: int = 0,
         state: OrderState = OrderState.OPENED,
         modify: bool = False,
-        has_new_pos: bool = False,
     ):
         if modify:
             Order.order_id_set.remove(order_id)
-            if has_new_pos:
-                self.positions = positions
 
         self.state = state
         self.customer = customer
+        self.positions = positions
 
         if order_id == 0:
             Order._order_id_counter += 1

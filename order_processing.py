@@ -790,6 +790,7 @@ def modify_order(
         f"entry: {_local_item_number}, intified: {int(_local_item_number), type(int(_local_item_number))}"
     )
     _old_order = order_cache.get_order(int(_local_item_number))
+    assert isinstance(_old_order, Order)
 
     print(f"_unmodified_order: {_old_order}")
 
@@ -862,12 +863,15 @@ def modify_order(
     _new_order = Order(
         customer=_old_order.customer,
         positions=(
-            (_new_positions if _modify_positions is True else _old_order.positions)
+            (
+                _new_positions
+                if _modify_positions is True
+                else position_cache.get_positions(_old_order.order_id)
+            )
         ),
         order_id=_old_order.order_id,
-        state=(_new_order_state if _modify_state is True else _old_order.order_state),
+        state=(_new_order_state if _modify_state is True else _old_order.state),
         modify=True,
-        has_new_pos=(_modify_positions is True),
     )
 
     remove_old_positions_from_position_cache(
@@ -964,10 +968,16 @@ def get_order_positions(
         _position_number_counter += 1
 
     print(f"_positions: {_positions}")
-    if not isinstance(_positions, list[Position]):
+
+    _is_valid = True
+    for pos in _positions:
+        if not isinstance(pos, Position):
+            _is_valid = False
+
+    if not _is_valid:
         print(
-            "        Fehler: Keine gültigen Positionen eingegeben... "
-            "Bitte starten probieren sie es noch einmal..."
+            "        Fehler: Keine gültigen Positionen eingegeben! "
+            "Bitte starten sie den Vorgang von Neuem."
         )
         return None
 

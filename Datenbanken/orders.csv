@@ -1,10 +1,9 @@
 order_id;customer_id;state
 1;2;Offen
-2;3;Offen
 3;4;Offen
 4;2;Offen
 5;3;Offen
 6;2;Offen
 7;2;Offen
-8;2;Offen
-9;2;Offen
+2;3;InArbeit
+8;2;Pausiert
