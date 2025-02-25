@@ -266,7 +266,7 @@ class Position:
             os.remove("./Datenbanken/positions.csv")
             _temp_positions_csv.rename("./Datenbanken/positions.csv")
 
-    def delete_position_in_csv(self):
+    def remove_position_from_csv(self):
         """
         Deletes the line containing the position information from the csv file.
         """
@@ -376,8 +376,6 @@ class Order:
         if modify:
             Order.order_id_set.remove(order_id)
             if has_new_pos:
-                self.positions = None
-            else:
                 self.positions = positions
 
         self.state = state

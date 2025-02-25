@@ -1,6 +1,7 @@
-"""Main module of the application"""
+"""Main entry point to the application."""
 
 import getpass
+import sys
 
 import authentication
 import customer_management
@@ -74,7 +75,7 @@ class MainMenu:
 
             elif _menu_item == "4":
                 print("        Das Programm wird beendet!")
-                quit()
+                sys.exit()
 
             elif _menu_item == "c":
                 printer.Printer.clear_cli()
@@ -100,8 +101,8 @@ class LoginMenu:
             info_text = """
         ##########################################################################################################
         Herzlich Wilkommen
-        
-        Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...                                                                                                      
+
+        Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...
         ##########################################################################################################
             """
 
@@ -118,7 +119,11 @@ class LoginMenu:
             self._password_hash = _password_hash
 
             _admin = user_repository.User(
-                _lastname, _name, _username_hash.hex(), _password_hash.hex(), _admin_otp
+                _lastname,
+                _name,
+                _username_hash.hex(),
+                _password_hash.hex(),
+                _admin_otp,
             )
             _admin.save_user_to_csv()
             self._user_cache.add_user_to_cache(_admin)
@@ -142,10 +147,9 @@ class LoginMenu:
                     assert isinstance(_user, user_repository.User)
                     if _user.username_hash != _username_hash:
                         continue
-                    else:
-                        print("        ... User existiert!")
-                        self._username_hash = _username_hash
-                        _user_exists = True
+                    print("        ... User existiert!")
+                    self._username_hash = _username_hash
+                    _user_exists = True
 
                     while self._logged_in is False:
                         _password = getpass.getpass("        Passwort: ")

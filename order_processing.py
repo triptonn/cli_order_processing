@@ -705,7 +705,7 @@ def order_processing_menu_loop(
                 assert isinstance(_order_to_delete, Order)
                 for pos in _order_to_delete.positions:
                     position_cache.remove_position_from_cache(pos)
-                    pos.delete_position_in_csv()
+                    pos.remove_position_from_csv()
                 order_cache.remove_order_from_cache(_order_to_delete)
                 _order_to_delete.delete_order_in_csv()
 
@@ -803,18 +803,37 @@ def modify_order(
         input("        Do you need to modify the order state? (Y/n) ") == "Y"
     )
 
-    if (_modify_positions is False and _modify_state is False) or _old_order is None:
+    print(
+        f"        You selected the following options:\n"
+        f"        Modify order positions: {_modify_positions}\n"
+        f"        Modify order state: {_modify_state}"
+    )
+    try:
+        if (
+            _modify_positions is False and _modify_state is False
+        ) or _old_order is None:
+            raise ModifyOrderException(
+                **{
+                    "old_order": _old_order,
+                    "old_order_type": type(_old_order),
+                }
+            )
+    except ModifyOrderException as exc:
         print(
-            "        Entered order id is not valid or there seems to be nothing to change."
+            f"Caught ModifyOrderException for order {exc.old_order} "
+            f"({exc.old_order_type})\nEither there is a problem with "
+            "the old Order object or there seems to be nothing to change."
         )
         return False
 
     if _modify_state is True:
         _new_state_str = input(
-            "        (Offen, InArbeit, Versandt, Bezahlt, Pausiert, Geschlossen)\n"
-            "        Please enter the updated order state: "
+            "        (Offen, InArbeit, Versandt, Bezahlt, Pausiert,"
+            " Geschlossen)\n        Please enter the updated order state: "
         )
-        _new_order_state = order_cache.convert_str_to_orderstate(_new_state_str)
+        _new_order_state = order_cache.convert_str_to_orderstate(
+            _new_state_str,
+        )
         if _new_order_state is None:
             return False
 
@@ -825,32 +844,35 @@ def modify_order(
         )
 
         if _new_positions is None or _new_positions == []:
-            print("        Fehler: Neue Positionen konnten nicht erzeugt werden")
+            print(
+                "        Fehler: Neue Positionen konnten nicht erzeugt werden",
+            )
             return False
 
         _isfinal: bool = (
             input(
-                "        Do you really want to overwrite the exisiting order positions? (Y/n): "
+                "        Do you really want to overwrite the exisiting "
+                "order positions? (Y/n): "
             )
             == "Y"
         )
         if not _isfinal:
             return False
 
-        remove_old_positions_from_position_cache(
-            position_cache,
-            _old_order.positions,
-        )
-
     _new_order = Order(
         customer=_old_order.customer,
         positions=(
-            _new_positions if _modify_positions is True else _old_order.positions
+            (_new_positions if _modify_positions is True else _old_order.positions)
         ),
         order_id=_old_order.order_id,
         state=(_new_order_state if _modify_state is True else _old_order.order_state),
         modify=True,
         has_new_pos=(_modify_positions is True),
+    )
+
+    remove_old_positions_from_position_cache(
+        position_cache,
+        _old_order.positions,
     )
 
     order_cache.update_cached_order(_old_order, _new_order)
@@ -865,12 +887,12 @@ def get_order_positions(
     order_id: int,
 ) -> list[Position] | None:
     """
-    Function to build the positions object when creating an order
+    Builds the list of Position object's when creating an order.
+    Returns either a [list][[Position]] or [None].
 
     Parameters
     ----------
     item_cache : [ItemCache]
-
     order_id : [int]
 
     Returns
@@ -957,22 +979,29 @@ def remove_old_positions_from_position_cache(
     old_positions: list[Position],
 ) -> None:
     """
-    Removes the old Position objects of a modified order
-    from the position cache.
+    Removes the old Position objects of the modified order
+    from the position cache and from the positions.csv.
 
     Parameters
     ----------
     position_cache : [PositionCache]
-
     old_positions : [list][[Position]]
     """
     try:
         for pos in old_positions:
-            pos.delete_position_in_csv()
+            if not isinstance(pos, Position):
+                raise RemovePositionException(
+                    **{
+                        "pos": pos,
+                        "old_positions": old_positions,
+                    }
+                )
+            pos.remove_position_from_csv()
             position_cache.remove_position_from_cache(pos)
-    except Exception:
+    except RemovePositionException as exc:
         print(
-            "Caught Exception while removing old Position objects from the position cache"
+            "Caught RemovePositionException while trying to remove "
+            f"old Position object {exc.pos} from {exc.old_positions}"
         )
 
 
@@ -989,7 +1018,14 @@ def get_item_name_or_number() -> str:
 
 
 def get_item_count() -> int | None:
-    """Asks user for input of an item count for this position"""
+    """
+    Asks user for input of an item count for this position.
+    Needs to be a valid integer.
+
+    Returns
+    -------
+    _count : [int] | [None]
+    """
     _count = None
     _count_str = input("        Stück: ")
     try:
@@ -998,3 +1034,31 @@ def get_item_count() -> int | None:
     except ValueError:
         print("Value is not a valid integer... try again...")
         return None
+
+
+class OrderProcessingException(Exception):
+    """Base exception class for exceptions during order processing"""
+
+
+class RemovePositionException(OrderProcessingException):
+    """
+    Exception catching problems during the removal of
+    the old positions of a modified Order object.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.pos = kwargs.get("pos")
+        self.old_positions = kwargs.get("old_positions")
+
+
+class ModifyOrderException(OrderProcessingException):
+    """
+    Exception catching problems during the modification
+    of a modified Order object.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.old_order = kwargs.get("old_order")
+        self.old_order_type = kwargs.get("old_order_type")
