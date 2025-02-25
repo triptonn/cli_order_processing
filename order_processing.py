@@ -585,6 +585,50 @@ class OrderCache:
         self._order_cache.remove(old)
         self._order_cache.add(new)
 
+    def print_order_detail(self, order_id: int = 0) -> bool:
+        decided = False
+        _id = None
+
+        while not decided:
+            if order_id == 0:
+                try:
+                    print("                          ?")
+                    _string = input(
+                        "        Bitte Auftragsnummer eingeben oder (a)bbruch: "
+                    )
+                    if _string == "a" or _string == "abbruch" or _string == "(a)bbruch":
+                        return False
+                    _id = int(_string)
+                    decided = True
+                except TypeError:
+                    print("        Eingabe ist kein gültiger Integer Wert!")
+            else:
+                if order_id > 0 and isinstance(order_id, int):
+                    _id = order_id
+                    decided = True
+                else:
+                    raise OrderNotFoundException(*{order_id})
+
+        _order = self.get_order(_id)
+        if _order is None:
+            print("        Order id could not be found!")
+            return False
+
+        print(
+            f"        Order {_order.order_id} / {_order.customer.company}:\n"
+            "        PosNr, Artikelname, Menge, Summe"
+        )
+        _total: float = 0.00
+        for pos in position_cache.get_order_positions(_order.order_id);
+            _line_total = pos.item.unit_price * pos.count
+            _total += _line_total
+            print(
+                f"        {pos.position_number}: {pos.item.item_name}"
+                f", {pos.count}, {_line_total}"
+            )
+
+        print(f"        Gesamt: {_total} EUR")
+
     def print_order_db(self) -> None:
         """
         Method used to print the content of the order cache to the console
@@ -614,6 +658,14 @@ class OrderCacheException(Exception):
 
 class OrderIDException(OrderCacheException):
     """Exception catching invalid order id"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.custom_kwarg = kwargs.get("custom_kwarg")
+
+
+class OrderNotFoundException(OrderCacheException):
+    """Exception catching if an Order object can't be found in the cache"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
@@ -663,9 +715,10 @@ def order_processing_menu_loop(
         1. Auftrag anlegen
         2. Auftrag bearbeiten
         3. Auftrag löschen
-        4. Aufträge ausgeben
-        5. Warenverwaltung
-        6. Zurück zum Hauptmenü
+        4. Auftragsdetails ausgeben
+        5. Aufträge ausgeben
+        6. Warenverwaltung
+        7. Zurück zum Hauptmenü
 
         ##########################################################################################################
     """
@@ -710,12 +763,15 @@ def order_processing_menu_loop(
                 _order_to_delete.delete_order_in_csv()
 
         elif _menu_item == "4":
-            order_cache.print_order_db()
+            order_cache.print_order_detail()
 
         elif _menu_item == "5":
-            item_management_menu_loop(item_cache=item_cache)
+            order_cache.print_order_db()
 
         elif _menu_item == "6":
+            item_management_menu_loop(item_cache=item_cache)
+
+        elif _menu_item == "7":
             _order_processing = False
 
         elif _menu_item == "c":

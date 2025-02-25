@@ -1,4 +1,4 @@
-position_id;order_id;position_number;item_number;count
+position_id;position_number;order_id;item_number;count
 1;1;1;3;3
 2;2;1;4;4
 3;2;2;3;3
