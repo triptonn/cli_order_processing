@@ -505,10 +505,17 @@ class OrderCache:
             _prep_order = str.split(_listed_order, sep=";")
             _order_state = self.convert_str_to_orderstate(_prep_order[2])
             _prep_order[2] = _order_state
-            if isinstance(_prep_order, list):
-                _order_values.append(_prep_order)
-            else:
-                raise StringToOrderConversionException
+            try:
+                if isinstance(_prep_order, list):
+                    _order_values.append(_prep_order)
+                else:
+                    raise StringToOrderConversionException(
+                        **{"order_str": _listed_order}
+                    )
+            except StringToOrderConversionException as exc:
+                print(
+                    f"Caught StringToOrderConversionException on value '{exc.order_str}'."
+                )
 
         return _order_values
 
@@ -547,7 +554,7 @@ class OrderCache:
                 case "Geschlossen":
                     _order_state = OrderState.CLOSED
                 case _:
-                    raise OrderStateException
+                    raise OrderStateException(**{"order_state": _order_state_str})
 
             return _order_state
 
@@ -614,7 +621,7 @@ class OrderCache:
         while not decided:
             if order_id == 0:
                 try:
-                    print("                          ?")
+                    print("")
                     _string = input("Bitte Auftragsnummer eingeben oder (a)bbruch: ")
                     if _string == "a" or _string == "abbruch" or _string == "(a)bbruch":
                         return False
@@ -623,11 +630,14 @@ class OrderCache:
                 except TypeError:
                     print("Eingabe ist kein gültiger Integer Wert!")
             else:
-                if order_id > 0 and isinstance(order_id, int):
-                    _id = order_id
-                    decided = True
-                else:
-                    raise OrderNotFoundException(*{order_id})
+                try:
+                    if order_id > 0 and isinstance(order_id, int):
+                        _id = order_id
+                        decided = True
+                    else:
+                        raise OrderNotFoundException(**{"order_id": order_id})
+                except OrderNotFoundException as exc:
+                    print(f"Caught OrderNotFoundException on order id {exc.order_id}.")
 
         _order = self.get_order(_id)
         if _order is None:
@@ -716,7 +726,7 @@ class StringToOrderConversionException(OrderCacheException):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
-        self.custom_kwarg = kwargs.get("custom_kwarg")
+        self.order_str = kwargs.get("order_str")
 
 
 def order_processing_menu_loop(
