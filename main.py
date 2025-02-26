@@ -40,22 +40,22 @@ class MainMenu:
             self._initialized = True
 
         menu_text = """
-        ##########################################################################################################
-        Herzlich Wilkommen
+##################################################################################
+Herzlich Wilkommen
 
-        Menü:                                                                          'c' um Bildschirm zu räumen
-        1. Auftragsbearbeitung
-        2. Kundendatenbank
-        3. Benutzerverwaltung
-        4. Programm beenden
+Menü:                                                  'c' um Bildschirm zu räumen
+1. Auftragsbearbeitung
+2. Kundendatenbank
+3. Benutzerverwaltung
+4. Programm beenden
 
-        ##########################################################################################################
-        """
+##################################################################################
+"""
 
         while True:
             print(menu_text)
 
-            _menu_item = input("        Bitte wählen Sie den gewünschten Menüpunkt: ")
+            _menu_item = input("Bitte wählen Sie den gewünschten Menüpunkt: ")
 
             if _menu_item == "1":
                 order_processing.order_processing_menu_loop(
@@ -74,7 +74,7 @@ class MainMenu:
                 )
 
             elif _menu_item == "4":
-                print("        Das Programm wird beendet!")
+                print("Das Programm wird beendet!")
                 sys.exit()
 
             elif _menu_item == "c":
@@ -99,11 +99,11 @@ class LoginMenu:
             _admin_otp = -1
 
             info_text = """
-        ##########################################################################################################
-        Herzlich Wilkommen
+##################################################################################
+Herzlich Wilkommen
 
-        Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...
-        ##########################################################################################################
+Der User 'admin' wurde generiert. Zunächst muss ein Passwort gewählt werden...
+##################################################################################
             """
 
             printer.Printer.clear_cli()
@@ -139,7 +139,7 @@ class LoginMenu:
             _user_exists = False
             while not _user_exists:
                 printer.Printer.clear_cli()
-                _username = getpass.getpass("        Benutzername: ")
+                _username = getpass.getpass("Benutzername: ")
                 self._authenticator = authentication.Authenticator(_username)
                 _username_hash = self._authenticator.custom_hash(_username)
 
@@ -147,17 +147,17 @@ class LoginMenu:
                     assert isinstance(_user, user_repository.User)
                     if _user.username_hash != _username_hash:
                         continue
-                    print("        ... User existiert!")
+                    print("... User existiert!")
                     self._username_hash = _username_hash
                     _user_exists = True
 
                     while self._logged_in is False:
-                        _password = getpass.getpass("        Passwort: ")
+                        _password = getpass.getpass("Passwort: ")
                         _password_hash = self._authenticator.custom_hash(_password)
                         for _user in self._user_cache.user_cache:
                             assert isinstance(_user, user_repository.User)
                             if _user.password_hash == _password_hash:
-                                print("        ... Passwort korrekt!")
+                                print("... Passwort korrekt!")
                                 self._user = _user
                                 self._logged_in = True
 

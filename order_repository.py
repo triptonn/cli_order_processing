@@ -15,6 +15,7 @@ class Item:
     _item_number_counter = 0
 
     def __init__(self, item_name: str, unit_price: float, item_number: int = 0):
+        self.item_number = None
         if item_number == 0:
             Item._item_number_counter += 1
             self.item_number = Item._item_number_counter
@@ -23,10 +24,15 @@ class Item:
             _item_number = int(item_number)
             if not Item.item_number_set.__contains__(_item_number):
                 Item.item_number_set.add(_item_number)
-                Item._item_number_counter = max(Item._item_number_counter, _item_number)
+                Item._item_number_counter = max(
+                    Item._item_number_counter,
+                    _item_number,
+                )
 
             self.item_number = _item_number
 
+        if self.item_number is None:
+            raise ItemNumberException(**{"item_number_parameter": item_number})
         self.item_name = item_name
         self.unit_price = unit_price
 
@@ -47,7 +53,7 @@ class Item:
                 os.mkdir("./Datenbanken/")
 
             with open(_items_csv, "w", encoding="UTF-8") as file:
-                file.write("item_number;name;unit_price\n")
+                file.write("item_number;item_name;unit_price\n")
                 file.write(f"{self.item_number};{self.item_name};{self.unit_price}\n")
 
     def update_item_in_csv(self, item_name="", unit_price=""):
@@ -110,6 +116,20 @@ class Item:
 
     def __str__(self):
         return f"{self.item_number},{self.item_name},{self.unit_price}"
+
+
+class ItemException(Exception):
+    """Base Exception for Item class"""
+
+
+class ItemNumberException(ItemException):
+    """
+    Exception catching invalid item numbers during Item initialization.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args)
+        self.item_number_parameter = kwargs.get("item_number_parameter")
 
 
 class Position:
